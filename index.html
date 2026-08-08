@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LMT Youtube Playlist feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="./index.js"></script>
+  </head>
+  <body class="bg-gray-100 text-gray-800 font-sans p-6 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <header class="mb-8 border-b pb-4">
+        <h1 class="text-3xl font-bold text-gray-900">
+          LMT Youtube Playlist feed
+        </h1>
+        <p class="text-gray-500 mt-1">All playlists</p>
+      </header>
+
+      <!-- Playlists Container -->
+      <div id="playlists-container" class="space-y-12">
+        <p class="text-gray-500">Fetching videos...</p>
+      </div>
+    </div>
+  </body>
+</html>
