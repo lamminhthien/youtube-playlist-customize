@@ -1,7 +1,11 @@
-export const renderError = (container) => (name, err) => {
-  const errorEl = document.createElement("p");
-  errorEl.className = "text-red-500";
-  errorEl.textContent = `Failed to load playlist "${name}".`;
+export const renderError = (name, err) => {
   console.error(err);
-  container.appendChild(errorEl);
+  const section = document.createElement("section");
+  section.innerHTML = `
+    <header class="mb-4 border-b pb-2">
+      <h2 class="text-2xl font-bold text-gray-900">${name}</h2>
+    </header>
+    <p class="text-red-500">Failed to load playlist "${name}".</p>
+  `;
+  return section;
 };

@@ -1,4 +1,4 @@
-export const renderPlaylist = (container) => ({ name, data }) => {
+export const renderPlaylist = ({ name, data }) => {
   const section = document.createElement("section");
   section.innerHTML = `
     <header class="mb-4 border-b pb-2">
@@ -30,5 +30,5 @@ export const renderPlaylist = (container) => ({ name, data }) => {
       }).join("")}
     </div>
   `;
-  container.appendChild(section);
+  return section;
 };
