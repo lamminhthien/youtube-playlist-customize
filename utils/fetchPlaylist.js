@@ -1,5 +1,7 @@
+import { printRssLink } from "./printRssLink.js";
+
 export const fetchPlaylist = async ([name, playlistId]) => {
-  const rssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+  const rssUrl = printRssLink(playlistId);
   const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
   const response = await fetch(apiUrl);
@@ -9,5 +11,5 @@ export const fetchPlaylist = async ([name, playlistId]) => {
     throw new Error(`Failed to load playlist: ${name}`);
   }
 
-  return { name, data };
+  return { name, playlistId, rssUrl, data };
 };

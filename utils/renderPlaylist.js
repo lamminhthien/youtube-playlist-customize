@@ -1,4 +1,5 @@
 import { escapeHtml } from "./escapeHtml.js";
+import { printRssLink } from "./printRssLink.js";
 
 const formatDate = (input) => {
   if (!input) return "";
@@ -11,13 +12,15 @@ const formatDate = (input) => {
   });
 };
 
-export const renderPlaylist = ({ name, data }) => {
+export const renderPlaylist = ({ name, playlistId, rssUrl, data }) => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
 
   const title = escapeHtml(data.feed.title || name);
   const author = escapeHtml(data.feed.author || "YouTube Channel");
   const count = Array.isArray(data.items) ? data.items.length : 0;
+  const safeRssUrl = escapeHtml(rssUrl || printRssLink(playlistId));
+  const safePlaylistId = escapeHtml(playlistId || "");
 
   section.innerHTML = `
     <div class="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200/60">
@@ -33,12 +36,45 @@ export const renderPlaylist = ({ name, data }) => {
             <p class="text-xs text-slate-500 mt-0.5">by <span class="font-medium text-slate-700">${author}</span></p>
           </div>
         </div>
-        <span class="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-full bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1">
-          <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-          </svg>
-          ${count} video${count === 1 ? "" : "s"}
-        </span>
+        <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            data-rss-copy
+            data-rss-url="${safeRssUrl}"
+            data-playlist-id="${safePlaylistId}"
+            title="Copy RSS feed URL"
+            aria-label="Copy RSS feed URL"
+            class="inline-flex items-center gap-1.5 rounded-full bg-white text-slate-600 ring-1 ring-slate-200 hover:text-rose-600 hover:ring-rose-200 hover:bg-rose-50 text-xs font-medium px-3 py-1 transition-colors"
+          >
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 11a9 9 0 0 1 9 9"/>
+              <path d="M4 4a16 16 0 0 1 16 16"/>
+              <circle cx="5" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+            <span data-rss-label>RSS</span>
+          </button>
+          <a
+            href="${safeRssUrl}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium px-3 py-1 transition-colors"
+            aria-label="Open RSS feed in new tab"
+            title="Open RSS feed"
+          >
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+            Feed
+          </a>
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1">
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+            </svg>
+            ${count} video${count === 1 ? "" : "s"}
+          </span>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
@@ -105,5 +141,27 @@ export const renderPlaylist = ({ name, data }) => {
       </div>
     </div>
   `;
+
+  const copyBtn = section.querySelector("[data-rss-copy]");
+  if (copyBtn) {
+    const label = copyBtn.querySelector("[data-rss-label]");
+    const originalLabel = label ? label.textContent : "RSS";
+    copyBtn.addEventListener("click", async () => {
+      const url = copyBtn.getAttribute("data-rss-url");
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        if (label) {
+          label.textContent = "Copied!";
+          setTimeout(() => {
+            label.textContent = originalLabel;
+          }, 1500);
+        }
+      } catch (err) {
+        console.error("Failed to copy RSS URL", err);
+      }
+    });
+  }
+
   return section;
 };

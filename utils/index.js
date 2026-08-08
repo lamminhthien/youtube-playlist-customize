@@ -3,3 +3,4 @@ export { renderPlaylist } from "./renderPlaylist.js";
 export { renderError } from "./renderError.js";
 export { renderTabs } from "./renderTabs.js";
 export { escapeHtml } from "./escapeHtml.js";
+export { printRssLink } from "./printRssLink.js";
