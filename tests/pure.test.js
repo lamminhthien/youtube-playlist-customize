@@ -1,13 +1,12 @@
-import { test, describe, beforeEach } from "node:test";
+import { test, describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-// Install the minimal DOM stub on globalThis BEFORE importing the SUT.
 import { document } from "./_domStub.js";
 globalThis.document = document;
 
 const { escapeHtml } = await import("../utils/escapeHtml.js");
-const { printRssLink } = await import("../utils/printRssLink.js");
 const { fetchPlaylist } = await import("../utils/fetchPlaylist.js");
+const { APPS_SCRIPT_URL } = await import("../config.constants.js");
 
 describe("escapeHtml", () => {
   test("escapes the five HTML-significant characters", () => {
@@ -57,38 +56,7 @@ describe("escapeHtml", () => {
   });
 });
 
-describe("printRssLink", () => {
-  test("builds a YouTube RSS feed URL using the given playlist id", () => {
-    assert.equal(
-      printRssLink("PLEyKu1JwbU4te4H7bkxp30Fx8ZmsP42Av"),
-      "https://www.youtube.com/feeds/videos.xml?playlist_id=PLEyKu1JwbU4te4H7bkxp30Fx8ZmsP42Av"
-    );
-  });
-
-  test("preserves underscores and dashes in playlist ids", () => {
-    assert.equal(
-      printRssLink("PL_abc-123_XYZ"),
-      "https://www.youtube.com/feeds/videos.xml?playlist_id=PL_abc-123_XYZ"
-    );
-  });
-
-  test("does NOT percent-encode the playlist id (caller's responsibility)", () => {
-    // printRssLink does no encoding by design — fetchPlaylist wraps it with encodeURIComponent.
-    assert.equal(
-      printRssLink("PL with space"),
-      "https://www.youtube.com/feeds/videos.xml?playlist_id=PL with space"
-    );
-  });
-
-  test("handles empty playlist id by producing a URL with empty query value", () => {
-    assert.equal(
-      printRssLink(""),
-      "https://www.youtube.com/feeds/videos.xml?playlist_id="
-    );
-  });
-});
-
-describe("fetchPlaylist", () => {
+describe("fetchPlaylist (Google Apps Script proxy)", () => {
   let originalFetch;
 
   beforeEach(() => {
@@ -99,40 +67,61 @@ describe("fetchPlaylist", () => {
     globalThis.fetch = originalFetch;
   }
 
-  test("calls rss2json with an encoded YouTube RSS URL", async () => {
-    globalThis.fetch = async (url) => {
+  test("calls the Apps Script URL with ?id=<playlistId>", async () => {
+    let captured;
+    globalThis.fetch = async (url, init) => {
+      captured = { url, init };
       return {
-        json: async () => ({ status: "ok", feed: {}, items: [] }),
-        _url: url,
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "success", items: [] }),
       };
     };
     try {
       await fetchPlaylist(["My Playlist", "PL123"]);
-      // Re-run with a spy to assert the URL.
-      let captured;
-      globalThis.fetch = async (url) => {
-        captured = url;
-        return { json: async () => ({ status: "ok", feed: {}, items: [] }) };
+      assert.equal(captured.url, `${APPS_SCRIPT_URL}?id=PL123`);
+      assert.equal(captured.init.method, "GET");
+      assert.equal(captured.init.redirect, "follow");
+    } finally {
+      restore();
+    }
+  });
+
+  test("percent-encodes playlist IDs that need it", async () => {
+    let captured;
+    globalThis.fetch = async (url) => {
+      captured = url;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "success", items: [] }),
       };
-      await fetchPlaylist(["My Playlist", "PL123"]);
+    };
+    try {
+      await fetchPlaylist(["My Playlist", "PL with space & symbols"]);
+      // URL.searchParams uses application/x-www-form-urlencoded encoding
+      // (spaces become '+', '&' is encoded as '%26' so it doesn't split params).
       assert.equal(
         captured,
-        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(
-          printRssLink("PL123")
-        )}`
+        `${APPS_SCRIPT_URL}?id=PL+with+space+%26+symbols`
       );
     } finally {
       restore();
     }
   });
 
-  test("returns { name, playlistId, rssUrl, data } on success", async () => {
+  test("returns { name, playlistId, data } on success", async () => {
     const apiPayload = {
-      status: "ok",
-      feed: { title: "My Playlist", author: "Channel" },
-      items: [{ title: "Video 1" }, { title: "Video 2" }],
+      status: "success",
+      message: "OK",
+      items: [
+        { id: "abc", title: "Video 1", url: "https://www.youtube.com/watch?v=abc" },
+        { id: "def", title: "Video 2", url: "https://www.youtube.com/watch?v=def" },
+      ],
     };
     globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
       json: async () => apiPayload,
     });
     try {
@@ -140,7 +129,6 @@ describe("fetchPlaylist", () => {
       assert.deepEqual(result, {
         name: "My Playlist",
         playlistId: "PL123",
-        rssUrl: printRssLink("PL123"),
         data: apiPayload,
       });
     } finally {
@@ -148,14 +136,48 @@ describe("fetchPlaylist", () => {
     }
   });
 
-  test("throws an error containing the playlist name when status is not 'ok'", async () => {
+  test("throws an error containing the playlist name when status is not 'success'", async () => {
     globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
       json: async () => ({ status: "error", message: "bad feed" }),
     });
     try {
       await assert.rejects(
         fetchPlaylist(["My Playlist", "PL123"]),
         /Failed to load playlist: My Playlist/
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  test("uses the API's message in the thrown error when present", async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "error", message: "quota exceeded" }),
+    });
+    try {
+      await assert.rejects(
+        fetchPlaylist(["My Playlist", "PL123"]),
+        /quota exceeded/
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  test("throws when the HTTP response is not ok", async () => {
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    });
+    try {
+      await assert.rejects(
+        fetchPlaylist(["My Playlist", "PL123"]),
+        /HTTP 500/
       );
     } finally {
       restore();
@@ -178,6 +200,8 @@ describe("fetchPlaylist", () => {
 
   test("propagates json parsing errors", async () => {
     globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
       json: async () => {
         throw new SyntaxError("Unexpected token");
       },
