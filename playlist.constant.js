@@ -3,4 +3,5 @@ export const PLAY_LIST_ID = {
     'TLM_Shared_2026' : 'PLFM_5xRQL7MQ',
     'TLM_Shared_001_2026': 'PLe9Hwhr-w510',
     'Mùa hè rực rỡ': "PLEyKu1JwbU4vO5WsW6c9qjF--8jvwbb78",
+    "Mix VN Music": "RD5e7e_KZINA4"
 }
