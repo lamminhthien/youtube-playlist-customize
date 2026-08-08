@@ -1,0 +1,10 @@
+{
+  "name": "youtube-playlist-customize",
+  "version": "1.0.0",
+  "description": "LMT YouTube Playlist feed viewer (vanilla JS + ESM).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/"
+  }
+}
