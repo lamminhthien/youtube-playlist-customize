@@ -1,4 +1,4 @@
-import { APPS_SCRIPT_URL } from "../config.constants.js";
+import { APPS_SCRIPT_URL } from "../constants/config.js";
 
 /**
  * Fetch a YouTube playlist via the deployed Google Apps Script Web App proxy.

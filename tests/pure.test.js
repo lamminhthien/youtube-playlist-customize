@@ -6,7 +6,7 @@ globalThis.document = document;
 
 const { escapeHtml } = await import("../utils/escapeHtml.js");
 const { fetchPlaylist } = await import("../utils/fetchPlaylist.js");
-const { APPS_SCRIPT_URL } = await import("../config.constants.js");
+const { APPS_SCRIPT_URL } = await import("../constants/config.js");
 
 describe("escapeHtml", () => {
   test("escapes the five HTML-significant characters", () => {

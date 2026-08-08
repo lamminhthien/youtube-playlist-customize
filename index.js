@@ -1,20 +1,33 @@
-import { PLAY_LIST_ID } from "./playlist.constant.js";
-import { fetchPlaylist, renderPlaylist, renderError, renderTabs } from "./utils/index.js";
+import { PLAY_LIST_ID } from "./constants/playlist.js";
+import {
+  fetchPlaylist,
+  renderPlaylist,
+  renderError,
+  renderTabs,
+  renderSkeleton,
+} from "./utils/index.js";
 
 const container = document.getElementById("playlists-container");
 const entries = Object.entries(PLAY_LIST_ID);
 
-Promise.allSettled(entries.map(fetchPlaylist)).then((results) => {
-  container.innerHTML = "";
+// Each tab gets:
+//   - `element`: an immediate skeleton placeholder (visible in the active tab).
+//   - `load`: a lazy fetcher triggered the first time the tab is activated.
+//             Cached after first run via the `_loaded` flag inside renderTabs.
+const buildLoader = ([name, playlistId]) => async () => {
+  try {
+    const data = await fetchPlaylist([name, playlistId]);
+    return renderPlaylist(data);
+  } catch (err) {
+    return renderError(name, err);
+  }
+};
 
-  const tabs = results.map((result, index) => {
-    const [name] = entries[index];
-    const element =
-      result.status === "fulfilled"
-        ? renderPlaylist(result.value)
-        : renderError(name, result.reason);
-    return { name, element };
-  });
+const tabs = entries.map(([name, playlistId]) => ({
+  name,
+  element: renderSkeleton(),
+  load: buildLoader([name, playlistId]),
+}));
 
-  renderTabs(container)(tabs);
-});
+container.innerHTML = "";
+renderTabs(container)(tabs);

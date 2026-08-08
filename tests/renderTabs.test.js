@@ -9,6 +9,8 @@ const { renderTabs } = await import("../utils/renderTabs.js");
 
 const makeEl = (name) => ({ name, element: document.createElement("div") });
 
+const makeLazy = (name, load) => ({ name, load });
+
 describe("renderTabs", () => {
   let container;
 
@@ -136,5 +138,118 @@ describe("renderTabs", () => {
     const panels = container.querySelectorAll('[role="tabpanel"]');
     assert.equal(panels[0].textContent, "A-CONTENT");
     assert.equal(panels[1].textContent, "B-CONTENT");
+  });
+});
+
+describe("renderTabs (lazy loading)", () => {
+  let container;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+  });
+
+  const flushMicrotasks = async () => {
+    // Drain microtasks repeatedly until loaders' promise chains settle.
+    for (let i = 0; i < 5; i++) {
+      await Promise.resolve();
+    }
+  };
+
+  test("invokes the first tab's load() on mount and renders its result", async () => {
+    let calls = 0;
+    const render = renderTabs(container);
+    render([
+      makeLazy("A", () => {
+        calls++;
+        const el = document.createElement("div");
+        el.textContent = "A-LOADED";
+        return el;
+      }),
+      makeLazy("B", () => {
+        const el = document.createElement("div");
+        el.textContent = "B-LOADED";
+        return el;
+      }),
+    ]);
+
+    const panels = container.querySelectorAll('[role="tabpanel"]');
+    assert.equal(panels[0].textContent, "");
+    await flushMicrotasks();
+    assert.equal(calls, 1);
+    assert.equal(panels[0].textContent, "A-LOADED");
+    // Tab B's load() is not invoked until activated.
+    assert.equal(panels[1].textContent, "");
+  });
+
+  test("does not re-invoke load() when re-activating an already loaded tab", async () => {
+    let calls = 0;
+    const render = renderTabs(container);
+    render([
+      makeLazy("A", () => {
+        calls++;
+        return document.createElement("div");
+      }),
+      makeLazy("B", () => {
+        calls++;
+        return document.createElement("div");
+      }),
+    ]);
+    await flushMicrotasks();
+
+    const tabs = container.querySelectorAll('[role="tab"]');
+    tabs[1].dispatchEvent({ type: "click" });
+    await flushMicrotasks();
+    tabs[0].dispatchEvent({ type: "click" });
+    await flushMicrotasks();
+    tabs[0].dispatchEvent({ type: "click" });
+    await flushMicrotasks();
+
+    assert.equal(calls, 2); // A + B, not re-invoked
+  });
+
+  test("renders renderError when a tab's load() rejects", async () => {
+    const render = renderTabs(container);
+    render([
+      makeLazy("A", () => Promise.reject(new Error("boom"))),
+      makeLazy("B", () => document.createElement("div")),
+    ]);
+
+    await flushMicrotasks();
+
+    const panels = container.querySelectorAll('[role="tabpanel"]');
+    assert.match(panels[0].textContent, /Couldn't load "A"/);
+  });
+
+  test("ignores tabs without a load() function", async () => {
+    const render = renderTabs(container);
+    // Legacy-shape tab (pre-lazy): only an `element` is provided.
+    const tabs = [
+      { name: "A", element: document.createElement("div") },
+      { name: "B", element: document.createElement("div") },
+    ];
+    tabs[0].element.textContent = "A-STATIC";
+    tabs[1].element.textContent = "B-STATIC";
+    render(tabs);
+
+    const panels = container.querySelectorAll('[role="tabpanel"]');
+    assert.equal(panels[0].textContent, "A-STATIC");
+    assert.equal(panels[1].textContent, "B-STATIC");
+  });
+
+  test("marks the active panel aria-busy while loading, then clears it", async () => {
+    let resolveLoad;
+    const render = renderTabs(container);
+    render([
+      makeLazy("A", () => new Promise((r) => { resolveLoad = r; })),
+    ]);
+    await flushMicrotasks();
+
+    const panels = container.querySelectorAll('[role="tabpanel"]');
+    assert.equal(panels[0].getAttribute("aria-busy"), "true");
+
+    resolveLoad(document.createElement("div"));
+    await flushMicrotasks();
+    assert.equal(panels[0].getAttribute("aria-busy"), null);
   });
 });

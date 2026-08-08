@@ -68,6 +68,10 @@ class Node {
     this.attributes[name] = String(value);
     if (name === "class") this.className = String(value);
   }
+  removeAttribute(name) {
+    delete this.attributes[name];
+    if (name === "class") this._classes.clear();
+  }
   getAttribute(name) {
     return name in this.attributes ? this.attributes[name] : null;
   }
@@ -77,6 +81,10 @@ class Node {
     return child;
   }
   append(...nodes) {
+    nodes.forEach((n) => this.appendChild(n));
+  }
+  replaceChildren(...nodes) {
+    this.childNodes = [];
     nodes.forEach((n) => this.appendChild(n));
   }
   addEventListener(type, fn) {

@@ -1,4 +1,6 @@
 import { escapeHtml } from "./escapeHtml.js";
+import { renderError } from "./renderError.js";
+import { renderSkeleton } from "./renderSkeleton.js";
 
 const TAB_BASE = [
   "relative",
@@ -65,13 +67,39 @@ export const renderTabs = (container) => (tabs) => {
     panels.forEach((panel, i) => {
       panel.classList.toggle("hidden", i !== activeIndex);
     });
+    loadTabContent(panels[activeIndex], tabs[activeIndex]);
+  };
+
+  /**
+   * Invoke a tab's optional `load` function on first activation, then swap
+   * the panel's children with the resolved element (or an error state).
+   * Subsequent activations are a no-op once the tab has finished loading.
+   */
+  const loadTabContent = async (panel, tab) => {
+    if (!tab || typeof tab.load !== "function" || tab._loaded) return;
+    tab._loaded = true;
+    panel.setAttribute("aria-busy", "true");
+    try {
+      const element = await tab.load();
+      if (element && element.nodeType === 1) {
+        panel.replaceChildren(element);
+      }
+    } catch (err) {
+      panel.replaceChildren(renderError(tab.name, err));
+    } finally {
+      panel.removeAttribute("aria-busy");
+    }
   };
 
   tabs.forEach((tab, index) => {
     const panel = document.createElement("div");
     panel.setAttribute("role", "tabpanel");
     panel.className = index === 0 ? "" : "hidden";
-    panel.appendChild(tab.element);
+    // Lazy tabs may omit `element`; their content arrives via the `load`
+    // callback the first time they become active.
+    if (tab.element) {
+      panel.appendChild(tab.element);
+    }
     panels.push(panel);
 
     const btn = document.createElement("button");
@@ -102,4 +130,8 @@ export const renderTabs = (container) => (tabs) => {
   tablist.append(...tabBtns);
   wrapper.append(tablist, ...panels);
   container.appendChild(wrapper);
+
+  // Kick off the lazy load for the initially-active tab so the user sees
+  // real content (not just a skeleton) without an extra click.
+  loadTabContent(panels[0], tabs[0]);
 };
