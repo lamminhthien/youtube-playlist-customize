@@ -29,12 +29,17 @@ const thumbnailFor = (item) =>
   (videoIdFromUrl(item.url) &&
     `https://i.ytimg.com/vi/${videoIdFromUrl(item.url)}/hqdefault.jpg`);
 
-export const renderPlaylist = ({ name, data }) => {
+export const renderPlaylist = ({ name, playlistId, data }) => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
 
   const title = escapeHtml(data.feed?.title || name);
   const count = Array.isArray(data.items) ? data.items.length : 0;
+  const firstVideoId = videoIdFromUrl(data.items?.[0]?.url);
+  const playAllUrl = firstVideoId
+    ? `https://www.youtube.com/watch?v=${firstVideoId}&list=${encodeURIComponent(playlistId || "")}`
+    : `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId || "")}`;
+  const showPlayAll = Boolean(playlistId) && count > 0;
 
   section.innerHTML = `
     <div class="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200/60">
@@ -54,6 +59,20 @@ export const renderPlaylist = ({ name, data }) => {
             </svg>
             ${count} video${count === 1 ? "" : "s"}
           </span>
+          ${showPlayAll ? `
+          <a
+            href="${escapeHtml(playAllUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-play-all
+            aria-label="Play all videos in this playlist on YouTube"
+            class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500 to-indigo-500 text-white text-xs font-semibold px-3 py-1 shadow-glow hover:opacity-90 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2"
+          >
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Play all
+          </a>` : ""}
         </div>
       </div>
 

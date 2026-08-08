@@ -193,4 +193,94 @@ describe("renderPlaylist", () => {
     assert.equal(section.querySelector('[aria-label*="Feed"]'), null);
     assert.ok(!section.textContent.includes("Powered by YouTube RSS"));
   });
+
+  describe("Play all button", () => {
+    test("renders a Play all link when a playlistId is provided and items exist", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: "PL123ABC",
+        data: baseData,
+      });
+      const link = section.querySelector("[data-play-all]");
+      assert.ok(link, "Expected a [data-play-all] anchor to be rendered");
+      assert.equal(link.tagName, "A");
+      assert.equal(link.getAttribute("target"), "_blank");
+      assert.ok(link.getAttribute("rel").includes("noopener"));
+      assert.match(link.textContent, /Play all/);
+    });
+
+    test("Play all link points at the first video URL with the playlist ID", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: "PL123ABC",
+        data: baseData,
+      });
+      const link = section.querySelector("[data-play-all]");
+      // first item in baseData is abc123XYZ; `&` is HTML-escaped in the attr.
+      assert.equal(
+        link.getAttribute("href"),
+        "https://www.youtube.com/watch?v=abc123XYZ&amp;list=PL123ABC"
+      );
+    });
+
+    test("percent-encodes playlist IDs that need it", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: "PL with space & symbols",
+        data: baseData,
+      });
+      const link = section.querySelector("[data-play-all]");
+      // encodeURIComponent uses %20 for spaces and %26 for `&`; the latter
+      // is then HTML-escaped to `&amp;` in the attribute string.
+      assert.equal(
+        link.getAttribute("href"),
+        "https://www.youtube.com/watch?v=abc123XYZ&amp;list=PL%20with%20space%20%26%20symbols"
+      );
+    });
+
+    test("Play all URL is escaped to prevent injection via playlistId", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: `"><img src=x onerror=alert(1)>`,
+        data: baseData,
+      });
+      const link = section.querySelector("[data-play-all]");
+      assert.ok(link);
+      // No live <img> tag from the playlistId anywhere in the rendered markup.
+      assert.ok(!section.innerHTML.includes(`"><img`));
+      assert.ok(!section.innerHTML.includes(`onerror=alert`));
+    });
+
+    test("does NOT render a Play all link when playlistId is missing", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        data: baseData,
+      });
+      assert.equal(section.querySelector("[data-play-all]"), null);
+    });
+
+    test("does NOT render a Play all link when items are empty", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: "PL123ABC",
+        data: { feed: { title: "T" }, items: [] },
+      });
+      assert.equal(section.querySelector("[data-play-all]"), null);
+    });
+
+    test("falls back to /playlist URL when items exist but first has no parseable video ID", () => {
+      const section = renderPlaylist({
+        name: "My Playlist",
+        playlistId: "PL123ABC",
+        data: {
+          feed: { title: "T" },
+          items: [{ title: "no url here" }],
+        },
+      });
+      const link = section.querySelector("[data-play-all]");
+      assert.equal(
+        link.getAttribute("href"),
+        "https://www.youtube.com/playlist?list=PL123ABC"
+      );
+    });  });
 });
