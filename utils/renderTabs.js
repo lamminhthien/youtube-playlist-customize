@@ -1,22 +1,44 @@
+import { escapeHtml } from "./escapeHtml.js";
+
 const TAB_BASE = [
+  "relative",
   "px-4",
   "py-2",
-  "-mb-px",
-  "border-b-2",
+  "rounded-full",
   "text-sm",
-  "transition-colors",
+  "font-medium",
+  "transition-all",
+  "duration-200",
   "focus:outline-none",
   "focus-visible:ring-2",
-  "focus-visible:ring-blue-500",
+  "focus-visible:ring-rose-400",
+  "focus-visible:ring-offset-2",
 ];
 
-const ACTIVE_TAB = ["border-blue-500", "text-blue-600", "font-semibold"];
-const INACTIVE_TAB = ["border-transparent", "text-gray-500", "hover:text-gray-700", "font-medium"];
+const ACTIVE_TAB = [
+  "bg-gradient-to-r",
+  "from-rose-500",
+  "to-indigo-500",
+  "text-white",
+  "shadow-glow",
+];
+
+const INACTIVE_TAB = [
+  "bg-white/70",
+  "text-slate-600",
+  "ring-1",
+  "ring-slate-200",
+  "hover:text-slate-900",
+  "hover:bg-white",
+];
 
 export const renderTabs = (container) => (tabs) => {
+  container.innerHTML = "";
+
   if (!tabs.length) {
-    const empty = document.createElement("p");
-    empty.className = "text-gray-500";
+    const empty = document.createElement("div");
+    empty.className =
+      "rounded-2xl bg-white/80 backdrop-blur p-10 text-center text-slate-500 shadow-soft ring-1 ring-slate-200/60";
     empty.textContent = "No playlists configured.";
     container.appendChild(empty);
     return;
@@ -26,7 +48,8 @@ export const renderTabs = (container) => (tabs) => {
 
   const tablist = document.createElement("div");
   tablist.setAttribute("role", "tablist");
-  tablist.className = "flex flex-wrap border-b border-gray-200 mb-6";
+  tablist.setAttribute("aria-label", "Playlists");
+  tablist.className = "flex flex-wrap items-center gap-2 mb-6";
 
   const tabBtns = [];
   const panels = [];
@@ -35,6 +58,7 @@ export const renderTabs = (container) => (tabs) => {
     tabBtns.forEach((btn, i) => {
       const isActive = i === activeIndex;
       btn.setAttribute("aria-selected", isActive ? "true" : "false");
+      btn.setAttribute("tabindex", isActive ? "0" : "-1");
       btn.classList.remove(...(isActive ? INACTIVE_TAB : ACTIVE_TAB));
       btn.classList.add(...(isActive ? ACTIVE_TAB : INACTIVE_TAB));
     });
@@ -46,7 +70,7 @@ export const renderTabs = (container) => (tabs) => {
   tabs.forEach((tab, index) => {
     const panel = document.createElement("div");
     panel.setAttribute("role", "tabpanel");
-    panel.className = index === 0 ? "tab-panel" : "tab-panel hidden";
+    panel.className = index === 0 ? "" : "hidden";
     panel.appendChild(tab.element);
     panels.push(panel);
 
@@ -54,9 +78,24 @@ export const renderTabs = (container) => (tabs) => {
     btn.type = "button";
     btn.setAttribute("role", "tab");
     btn.setAttribute("aria-selected", index === 0 ? "true" : "false");
+    btn.setAttribute("tabindex", index === 0 ? "0" : "-1");
     btn.textContent = tab.name;
-    btn.className = [...TAB_BASE, ...(index === 0 ? ACTIVE_TAB : INACTIVE_TAB)].join(" ");
-    btn.addEventListener("click", () => setActive(index));
+    btn.className = [
+      ...TAB_BASE,
+      ...(index === 0 ? ACTIVE_TAB : INACTIVE_TAB),
+    ].join(" ");
+    btn.addEventListener("click", () => {
+      setActive(index);
+      btn.focus();
+    });
+    btn.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      const next = (index + dir + tabBtns.length) % tabBtns.length;
+      setActive(next);
+      tabBtns[next].focus();
+    });
     tabBtns.push(btn);
   });
 
