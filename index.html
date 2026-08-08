@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LMT Youtube Playlist feed</title>
+    <meta name="theme-color" content="#f43f5e" />
+    <meta name="description" content="All your curated YouTube playlists in one calm, distraction-free place." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Playlist Hub" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./logo.svg" />
+    <title>Playlist Hub · LMT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -71,6 +79,15 @@
       }
     </style>
     <script type="module" src="./index.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch((err) =>
+            console.warn("SW registration failed:", err)
+          );
+        });
+      }
+    </script>
   </head>
   <body
     class="relative min-h-screen text-slate-800 bg-gradient-to-br from-slate-50 via-rose-50 to-indigo-50"
@@ -89,25 +106,34 @@
       <!-- Header -->
       <header class="mb-10">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <span
-              class="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-200 shadow-sm"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-              LMT · YouTube Feed
-            </span>
-            <h1
-              class="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900"
-            >
+          <div class="flex items-center gap-4">
+            <img
+              src="./logo.svg"
+              alt="Playlist Hub logo"
+              width="72"
+              height="72"
+              class="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl shadow-soft ring-1 ring-rose-200/60 bg-white"
+            />
+            <div>
               <span
-                class="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-indigo-500 bg-clip-text text-transparent"
-                >Playlist</span
+                class="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-200 shadow-sm"
               >
-              Hub
-            </h1>
-            <p class="mt-2 text-slate-500 max-w-xl">
-              All your curated playlists in one calm, distraction-free place.
-            </p>
+                <span class="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                LMT · YouTube Feed
+              </span>
+              <h1
+                class="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900"
+              >
+                <span
+                  class="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-indigo-500 bg-clip-text text-transparent"
+                  >Playlist</span
+                >
+                Hub
+              </h1>
+              <p class="mt-2 text-slate-500 max-w-xl">
+                All your curated playlists in one calm, distraction-free place.
+              </p>
+            </div>
           </div>
 
           <div

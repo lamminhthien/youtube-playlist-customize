@@ -1,0 +1,27 @@
+{
+  "name": "Playlist Hub · LMT",
+  "short_name": "Playlist Hub",
+  "description": "All your curated YouTube playlists in one calm, distraction-free place.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#f43f5e",
+  "lang": "en",
+  "categories": ["entertainment", "music", "video"],
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
