@@ -79,6 +79,10 @@
       }
     </style>
     <script type="module" src="./index.js"></script>
+    <script type="module">
+      import { inject } from '@vercel/analytics';
+      inject();
+    </script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
