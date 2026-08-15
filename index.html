@@ -136,25 +136,72 @@
             </div>
           </div>
 
-          <div
-            class="hidden sm:flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 shadow-sm"
-          >
-            <svg
-              class="h-4 w-4 text-rose-500"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
+          <div class="flex items-center gap-3">
+            <div
+              class="hidden sm:flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 shadow-sm"
             >
-              <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-            </svg>
-            Updated continuously
+              <svg
+                class="h-4 w-4 text-rose-500"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+              </svg>
+              Updated continuously
+            </div>
+
+            <button
+              id="clear-cache-btn"
+              title="Clear cached files and reload"
+              onclick="(async () => {
+                const btn = document.getElementById('clear-cache-btn');
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                const icon = btn.querySelector('.btn-icon');
+                icon.classList.add('animate-spin');
+                try {
+                  if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                  }
+                  if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                  }
+                  window.location.reload(true);
+                } catch (e) {
+                  console.error('Cache clear failed:', e);
+                  btn.disabled = false;
+                  btn.removeAttribute('aria-busy');
+                  icon.classList.remove('animate-spin');
+                }
+              })()"
+              class="flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 shadow-sm transition hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <svg
+                class="btn-icon h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Clear Cache
+            </button>
           </div>
         </div>
       </header>
+
 
       <!-- Playlists Container -->
       <main

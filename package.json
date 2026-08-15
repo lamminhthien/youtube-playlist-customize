@@ -6,7 +6,10 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.js",
+    "bump-cache": "node scripts/bump-cache-version.mjs",
+    "predeploy": "node scripts/bump-cache-version.mjs",
     "deploy": "wrangler deploy",
+    "deploy:vercel": "node scripts/bump-cache-version.mjs && vercel --prod",
     "preview": "wrangler dev"
   },
   "devDependencies": {

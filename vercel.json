@@ -1,0 +1,5 @@
+{
+  "buildCommand": "node scripts/bump-cache-version.mjs",
+  "outputDirectory": ".",
+  "installCommand": "npm install"
+}
