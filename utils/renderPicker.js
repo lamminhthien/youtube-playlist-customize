@@ -1,4 +1,5 @@
 import { escapeHtml } from "./escapeHtml.js";
+import { fetchIcon } from "./fetchIcon.js";
 
 // Deterministic pastel color per name so each icon looks distinct but stable
 // across reloads (no randomness).
@@ -21,19 +22,22 @@ const initialsFor = (name) =>
     .toUpperCase();
 
 /**
- * Render a grid of selectable icons (one per entry name) into `container`.
+ * Render a grid of selectable icons (one per entry) into `container`.
  * Calling `onSelect(index)` is deferred until the user picks an entry, so no
- * video data is fetched up front.
+ * video data is fetched up front. Each icon starts as an initials placeholder
+ * and is swapped for a real channel/playlist thumbnail once `fetchIcon`
+ * resolves, without blocking rendering or selection on that fetch.
  *
  * @param {HTMLElement} container
- * @param {string[]} names
+ * @param {[string, string][]} entries - Tuples of [name, channelId/playlistId]
+ * @param {"channel"|"playlist"} type
  * @param {(index: number) => void} onSelect
  */
-export const renderPicker = (container, names, onSelect) => {
+export const renderPicker = (container, entries, type, onSelect) => {
   const grid = document.createElement("div");
   grid.className = "yt-picker-grid";
 
-  names.forEach((name, index) => {
+  entries.forEach(([name, id], index) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "yt-picker-item";
@@ -47,7 +51,16 @@ export const renderPicker = (container, names, onSelect) => {
 
     btn.addEventListener("click", () => onSelect(index));
     grid.appendChild(btn);
+
+    fetchIcon(type, id).then((iconUrl) => {
+      if (!iconUrl) return;
+      const avatar = btn.querySelector(".yt-picker-avatar");
+      if (!avatar) return;
+      avatar.style.background = "transparent";
+      avatar.innerHTML = `<img src="${escapeHtml(iconUrl)}" alt="" class="yt-picker-img" loading="lazy" />`;
+    });
   });
 
   container.appendChild(grid);
 };
+

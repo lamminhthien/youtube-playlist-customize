@@ -33,17 +33,13 @@ const buildEntryTabs = (entries, fetcher) =>
 // first time the section is activated, so both sections never render at once.
 // Rather than jumping straight into the first entry's videos, we first show
 // a picker of icons for every entry so the user chooses what to load.
-const buildSection = (name, entries, fetcher) => ({
+const buildSection = (name, entries, fetcher, iconType) => ({
   name,
   load: async () => {
     const wrapper = document.createElement("div");
-    renderPicker(
-      wrapper,
-      entries.map(([entryName]) => entryName),
-      (index) => {
-        renderTabs(wrapper)(buildEntryTabs(entries, fetcher), index);
-      }
-    );
+    renderPicker(wrapper, entries, iconType, (index) => {
+      renderTabs(wrapper)(buildEntryTabs(entries, fetcher), index);
+    });
     return wrapper;
   },
 });
@@ -51,8 +47,8 @@ const buildSection = (name, entries, fetcher) => ({
 const container = document.getElementById("app-container");
 container.innerHTML = "";
 renderTabs(container)([
-  buildSection("Channels", Object.entries(CHANNEL_ID), fetchChannel),
-  buildSection("Custom Playlist", Object.entries(PLAY_LIST_ID), fetchPlaylist),
+  buildSection("Channels", Object.entries(CHANNEL_ID), fetchChannel, "channel"),
+  buildSection("Custom Playlist", Object.entries(PLAY_LIST_ID), fetchPlaylist, "playlist"),
 ]);
 
 

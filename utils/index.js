@@ -1,5 +1,6 @@
 export { fetchPlaylist } from "./fetchPlaylist.js";
 export { fetchChannel } from "./fetchChannel.js";
+export { fetchIcon } from "./fetchIcon.js";
 export { renderPlaylist } from "./renderPlaylist.js";
 export { renderError } from "./renderError.js";
 export { renderSkeleton } from "./renderSkeleton.js";
