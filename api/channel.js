@@ -1,21 +1,7 @@
 // Vercel serverless function: fetches a YouTube channel's recent uploads
 // directly from YouTube's InnerTube API via youtubei.js. Accepts a required
 // `?id=` query parameter — either an `@handle` or a `UC...` channel id.
-import { getInnertube, collectVideos, MAX_CONTINUATION_PAGES } from "./_youtube.js";
-
-const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
-
-const resolveChannelId = async (yt, idOrHandle) => {
-  if (CHANNEL_ID_RE.test(idOrHandle)) return idOrHandle;
-
-  const handle = idOrHandle.startsWith("@") ? idOrHandle : `@${idOrHandle}`;
-  const endpoint = await yt.resolveURL(`https://www.youtube.com/${handle}`);
-  const browseId = endpoint?.payload?.browseId;
-  if (!browseId) {
-    throw new Error(`Could not resolve channel handle: ${idOrHandle}`);
-  }
-  return browseId;
-};
+import { getInnertube, collectVideos, resolveChannelId, MAX_CONTINUATION_PAGES } from "./_youtube.js";
 
 export default async function handler(req, res) {
   const channelHandle =

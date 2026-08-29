@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/bump-cache-version.mjs",
+  "buildCommand": "node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs",
   "outputDirectory": ".",
   "installCommand": "npm install"
 }

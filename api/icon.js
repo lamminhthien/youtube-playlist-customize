@@ -1,21 +1,7 @@
 // Vercel serverless function: fetches just a channel avatar or playlist
 // thumbnail via youtubei.js — no video list is requested, so this stays
 // cheap enough to call for every entry shown in the picker UI.
-import { getInnertube, pickThumbnail, extractVideo } from "./_youtube.js";
-
-const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
-
-const resolveChannelId = async (yt, idOrHandle) => {
-  if (CHANNEL_ID_RE.test(idOrHandle)) return idOrHandle;
-
-  const handle = idOrHandle.startsWith("@") ? idOrHandle : `@${idOrHandle}`;
-  const endpoint = await yt.resolveURL(`https://www.youtube.com/${handle}`);
-  const browseId = endpoint?.payload?.browseId;
-  if (!browseId) {
-    throw new Error(`Could not resolve channel handle: ${idOrHandle}`);
-  }
-  return browseId;
-};
+import { getInnertube, pickThumbnail, extractVideo, resolveChannelId } from "./_youtube.js";
 
 const channelIcon = async (yt, idOrHandle) => {
   const channelId = await resolveChannelId(yt, idOrHandle);

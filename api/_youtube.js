@@ -68,3 +68,28 @@ export const collectVideos = (feed, items) => {
 };
 
 export const MAX_CONTINUATION_PAGES = 20;
+
+const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
+
+// Percent-encodes the handle name but keeps a leading "@" literal, since
+// InnerTube's resolve_url endpoint only recognizes an unescaped "@".
+const encodeHandlePath = (path) =>
+  path.startsWith("@") ? `@${encodeURIComponent(path.slice(1))}` : encodeURIComponent(path);
+
+// Some channels' configured "@handle" doesn't actually resolve (e.g. it was
+// never claimed or the channel predates handles), but the same name still
+// works as a legacy custom URL without the "@". Try both forms.
+export const resolveChannelId = async (yt, idOrHandle) => {
+  if (CHANNEL_ID_RE.test(idOrHandle)) return idOrHandle;
+
+  const handle = idOrHandle.startsWith("@") ? idOrHandle : `@${idOrHandle}`;
+  const candidates = [handle, handle.slice(1)];
+
+  for (const candidate of candidates) {
+    const endpoint = await yt.resolveURL(`https://www.youtube.com/${encodeHandlePath(candidate)}`);
+    const browseId = endpoint?.payload?.browseId;
+    if (browseId) return browseId;
+  }
+
+  throw new Error(`Could not resolve channel handle: ${idOrHandle}`);
+};
