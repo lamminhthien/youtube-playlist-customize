@@ -1,19 +1,21 @@
-import { APPS_SCRIPT_URL } from "../constants/config.js";
+import { PLAYLIST_API_URL } from "../constants/config.js";
 
 /**
- * Fetch a YouTube playlist via the deployed Google Apps Script Web App proxy.
+ * Fetch a YouTube playlist via our own serverless endpoint (api/playlist.js),
+ * which uses youtubei.js to talk to YouTube's InnerTube API directly — no
+ * Google Apps Script and no YouTube Data API key required.
  *
- * The Apps Script returns JSON of the form:
- *   { status: "success", message: "...", items: [{ id, title, thumbnail, publishedAt, url }] }
+ * The endpoint returns JSON of the form:
+ *   { status: "success", feed: { title }, items: [{ id, title, thumbnail, publishedAt, url }] }
  *
  * @param {[string, string]} entry - Tuple of [playlistName, playlistId]
  * @returns {Promise<{ name: string, playlistId: string, data: { items: Array } }>}
  */
 export const fetchPlaylist = async ([name, playlistId]) => {
-  const url = new URL(APPS_SCRIPT_URL);
-  url.searchParams.append("id", playlistId);
+  const params = new URLSearchParams({ id: playlistId });
+  const url = `${PLAYLIST_API_URL}?${params.toString()}`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: "GET",
     redirect: "follow",
   });

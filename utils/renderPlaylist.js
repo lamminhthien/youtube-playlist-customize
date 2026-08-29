@@ -3,7 +3,7 @@ import { escapeHtml } from "./escapeHtml.js";
 const formatDate = (input) => {
   if (!input) return "";
   const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return "";
+  if (Number.isNaN(d.getTime())) return String(input);
   return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -29,12 +29,15 @@ const thumbnailFor = (item) =>
   (videoIdFromUrl(item.url) &&
     `https://i.ytimg.com/vi/${videoIdFromUrl(item.url)}/hqdefault.jpg`);
 
+const videoIdOf = (item) => item?.id || videoIdFromUrl(item?.url);
+
 export const renderPlaylist = ({ name, playlistId, data }) => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
 
+  const items = Array.isArray(data.items) ? data.items : [];
   const title = escapeHtml(data.feed?.title || name);
-  const count = Array.isArray(data.items) ? data.items.length : 0;
+  const count = items.length;
   const firstVideoId = videoIdFromUrl(data.items?.[0]?.url);
   const playAllUrl = firstVideoId
     ? `https://www.youtube.com/watch?v=${firstVideoId}&list=${encodeURIComponent(playlistId || "")}`
@@ -76,8 +79,28 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
         </div>
       </div>
 
+      <div data-player-panel class="hidden px-5 pt-5">
+        <div class="relative aspect-video overflow-hidden rounded-xl bg-black shadow-soft">
+          <div data-player-frame class="absolute inset-0"></div>
+        </div>
+        <div class="mt-3 flex items-center justify-between gap-3">
+          <h4 data-player-title class="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800"></h4>
+          <div class="flex items-center gap-2">
+            <button type="button" data-player-prev aria-label="Previous video" class="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button type="button" data-player-next aria-label="Next video" class="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button type="button" data-player-close aria-label="Close player" class="rounded-full bg-slate-100 p-2 text-slate-600 hover:bg-rose-100 hover:text-rose-600">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
-        ${(data.items || []).map((item) => {
+        ${items.map((item, index) => {
           const safeTitle = escapeHtml(item.title);
           const published = formatDate(item.publishedAt);
           const safeLink = escapeHtml(item.url || "#");
@@ -88,6 +111,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
               href="${safeLink}"
               target="_blank"
               rel="noopener noreferrer"
+              data-video-index="${index}"
               class="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-soft ring-1 ring-slate-200/60 hover:shadow-glow hover:-translate-y-0.5 transition-all duration-300"
             >
               <div class="relative aspect-video overflow-hidden bg-slate-200">
@@ -135,6 +159,70 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       </div>
     </div>
   `;
+
+  // Lightweight inline player: no iframe is ever loaded for a video until
+  // the user actually clicks it, and only one iframe exists per playlist
+  // section at a time (reused across next/prev navigation).
+  const panel = section.querySelector("[data-player-panel]");
+  const frame = section.querySelector("[data-player-frame]");
+  const playerTitle = section.querySelector("[data-player-title]");
+  const prevBtn = section.querySelector("[data-player-prev]");
+  const nextBtn = section.querySelector("[data-player-next]");
+  const closeBtn = section.querySelector("[data-player-close]");
+
+  let currentIndex = -1;
+
+  const playAt = (index) => {
+    const item = items[index];
+    const videoId = videoIdOf(item);
+    if (!item || !videoId) return;
+
+    currentIndex = index;
+    frame.innerHTML = `
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1"
+        title="${escapeHtml(item.title || "YouTube video player")}"
+        class="h-full w-full"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      ></iframe>
+    `;
+    playerTitle.textContent = item.title || "";
+    prevBtn.disabled = currentIndex <= 0;
+    nextBtn.disabled = currentIndex >= items.length - 1;
+    panel.classList.remove("hidden");
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  const closePlayer = () => {
+    frame.innerHTML = "";
+    panel.classList.add("hidden");
+    currentIndex = -1;
+  };
+
+  prevBtn?.addEventListener("click", () => {
+    if (currentIndex > 0) playAt(currentIndex - 1);
+  });
+  nextBtn?.addEventListener("click", () => {
+    if (currentIndex < items.length - 1) playAt(currentIndex + 1);
+  });
+  closeBtn?.addEventListener("click", closePlayer);
+
+  section.querySelectorAll("[data-video-index]").forEach((anchor) => {
+    anchor.addEventListener("click", (event) => {
+      // Let modified clicks (new tab / new window) and non-primary buttons
+      // fall through to the normal link behavior.
+      if (event.button && event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const index = Number(anchor.getAttribute("data-video-index"));
+      if (Number.isNaN(index)) return;
+
+      event.preventDefault();
+      playAt(index);
+    });
+  });
 
   return section;
 };

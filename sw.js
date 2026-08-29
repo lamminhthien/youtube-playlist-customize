@@ -1,4 +1,4 @@
-const CACHE_NAME = "playlist-hub-v202608150610";
+const CACHE_NAME = "playlist-hub-v202608291244";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -45,6 +45,9 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Never cache-first the playlist API — it's fetched fresh on every load
+  // (the endpoint itself sets its own Cache-Control for CDN-level caching).
+  if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {

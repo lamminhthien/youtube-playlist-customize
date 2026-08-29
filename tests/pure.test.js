@@ -6,7 +6,7 @@ globalThis.document = document;
 
 const { escapeHtml } = await import("../utils/escapeHtml.js");
 const { fetchPlaylist } = await import("../utils/fetchPlaylist.js");
-const { APPS_SCRIPT_URL } = await import("../constants/config.js");
+const { PLAYLIST_API_URL } = await import("../constants/config.js");
 
 describe("escapeHtml", () => {
   test("escapes the five HTML-significant characters", () => {
@@ -56,7 +56,7 @@ describe("escapeHtml", () => {
   });
 });
 
-describe("fetchPlaylist (Google Apps Script proxy)", () => {
+describe("fetchPlaylist (local youtubei.js API endpoint)", () => {
   let originalFetch;
 
   beforeEach(() => {
@@ -67,7 +67,7 @@ describe("fetchPlaylist (Google Apps Script proxy)", () => {
     globalThis.fetch = originalFetch;
   }
 
-  test("calls the Apps Script URL with ?id=<playlistId>", async () => {
+  test("calls the local API endpoint with ?id=<playlistId>", async () => {
     let captured;
     globalThis.fetch = async (url, init) => {
       captured = { url, init };
@@ -79,7 +79,7 @@ describe("fetchPlaylist (Google Apps Script proxy)", () => {
     };
     try {
       await fetchPlaylist(["My Playlist", "PL123"]);
-      assert.equal(captured.url, `${APPS_SCRIPT_URL}?id=PL123`);
+      assert.equal(captured.url, `${PLAYLIST_API_URL}?id=PL123`);
       assert.equal(captured.init.method, "GET");
       assert.equal(captured.init.redirect, "follow");
     } finally {
@@ -99,11 +99,11 @@ describe("fetchPlaylist (Google Apps Script proxy)", () => {
     };
     try {
       await fetchPlaylist(["My Playlist", "PL with space & symbols"]);
-      // URL.searchParams uses application/x-www-form-urlencoded encoding
+      // URLSearchParams uses application/x-www-form-urlencoded encoding
       // (spaces become '+', '&' is encoded as '%26' so it doesn't split params).
       assert.equal(
         captured,
-        `${APPS_SCRIPT_URL}?id=PL+with+space+%26+symbols`
+        `${PLAYLIST_API_URL}?id=PL+with+space+%26+symbols`
       );
     } finally {
       restore();

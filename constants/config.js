@@ -1,5 +1,5 @@
-// Deployed Google Apps Script Web App URL that proxies the YouTube Data API.
-// Accepts an optional `?id=PLAYLIST_ID` query parameter; falls back to a
-// hard-coded default inside the script if omitted.
-export const APPS_SCRIPT_URL =
-  "https://script.google.com/macros/s/AKfycbwPSiCmrKITSaHFFFdSvxPO5OfYuoO8AcOhRTI5naiKe-6DzcFKx1jF2rcnq_dKN6kg/exec";
+// Local Vercel serverless function (api/playlist.js) that fetches playlist
+// data directly from YouTube's InnerTube API via youtubei.js. Accepts a
+// required `?id=PLAYLIST_ID` query parameter. No Google Apps Script or
+// YouTube Data API key required.
+export const PLAYLIST_API_URL = "/api/playlist";
