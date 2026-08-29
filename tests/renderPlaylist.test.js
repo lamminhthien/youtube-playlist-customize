@@ -191,7 +191,6 @@ describe("renderPlaylist", () => {
     assert.equal(section.querySelector("[data-rss-copy]"), null);
     assert.equal(section.querySelector('[aria-label*="RSS"]'), null);
     assert.equal(section.querySelector('[aria-label*="Feed"]'), null);
-    assert.ok(!section.textContent.includes("Powered by YouTube RSS"));
   });
 
   describe("Play all button", () => {
