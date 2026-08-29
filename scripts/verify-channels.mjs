@@ -9,7 +9,11 @@
  */
 
 import { Innertube } from "youtubei.js";
-import { resolveChannelId, collectVideos } from "../api/_youtube.js";
+import {
+  INNERTUBE_SESSION_OPTIONS,
+  resolveChannelId,
+  collectVideos,
+} from "../api/_youtube.js";
 import { CHANNEL_ID } from "../constants/channels.js";
 import { PLAY_LIST_ID } from "../constants/playlist.js";
 
@@ -39,10 +43,7 @@ const verifyPlaylist = async (yt, name, playlistId) => {
 };
 
 const run = async () => {
-  const yt = await Innertube.create({
-    generate_session_locally: true,
-    retrieve_player: false,
-  });
+  const yt = await Innertube.create(INNERTUBE_SESSION_OPTIONS);
 
   const checks = [
     ...Object.entries(CHANNEL_ID).map(([name, idOrHandle]) => ({

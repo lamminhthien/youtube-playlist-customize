@@ -5,12 +5,17 @@ import { Innertube } from "youtubei.js";
 // Reused across warm invocations of the same serverless instance so we don't
 // re-negotiate an InnerTube session on every request.
 let innertubePromise;
+export const INNERTUBE_SESSION_OPTIONS = {
+  lang: "vi",
+  location: "VN",
+  timezone: "Asia/Ho_Chi_Minh",
+  generate_session_locally: true,
+  retrieve_player: false,
+};
+
 export const getInnertube = () => {
   if (!innertubePromise) {
-    innertubePromise = Innertube.create({
-      generate_session_locally: true,
-      retrieve_player: false,
-    });
+    innertubePromise = Innertube.create(INNERTUBE_SESSION_OPTIONS);
   }
   return innertubePromise;
 };
