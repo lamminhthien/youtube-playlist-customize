@@ -31,6 +31,68 @@ const thumbnailFor = (item) =>
 
 const videoIdOf = (item) => item?.id || videoIdFromUrl(item?.url);
 
+// Rendering every card up front is what makes large channels/playlists feel
+// slow (hundreds of DOM nodes at once). Instead we render an initial batch
+// and lazily render the rest as the user scrolls near the bottom.
+const RENDER_BATCH_SIZE = 24;
+
+const videoCardHtml = (item, index) => {
+  const safeTitle = escapeHtml(item.title);
+  const published = formatDate(item.publishedAt);
+  const safeLink = escapeHtml(item.url || "#");
+  const safeThumb = escapeHtml(thumbnailFor(item));
+
+  return `
+    <a
+      href="${safeLink}"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-video-index="${index}"
+      class="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-soft ring-1 ring-slate-200/60 hover:shadow-glow hover:-translate-y-0.5 transition-all duration-300"
+    >
+      <div class="relative aspect-video overflow-hidden bg-slate-200">
+        <img
+          src="${safeThumb}"
+          alt="${safeTitle}"
+          loading="lazy"
+          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-rose-500 shadow-lg ring-1 ring-black/5 backdrop-blur">
+            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </span>
+        </div>
+        <span class="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
+          YouTube
+        </span>
+      </div>
+
+      <div class="flex flex-col gap-2 p-4 flex-grow">
+        <h3 class="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-rose-600 transition-colors">
+          ${safeTitle}
+        </h3>
+        <div class="mt-auto flex items-center justify-between pt-3 text-xs text-slate-400">
+          <span class="inline-flex items-center gap-1">
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+            ${escapeHtml(published)}
+          </span>
+          <span class="inline-flex items-center gap-1 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            Watch
+            <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </a>
+  `;
+};
+
 export const renderPlaylist = ({ name, playlistId, data }) => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
@@ -43,6 +105,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     ? `https://www.youtube.com/watch?v=${firstVideoId}&list=${encodeURIComponent(playlistId || "")}`
     : `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId || "")}`;
   const showPlayAll = Boolean(playlistId) && count > 0;
+  const initialItems = items.slice(0, RENDER_BATCH_SIZE);
 
   section.innerHTML = `
     <div class="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur shadow-soft ring-1 ring-slate-200/60">
@@ -99,63 +162,8 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
-        ${items.map((item, index) => {
-          const safeTitle = escapeHtml(item.title);
-          const published = formatDate(item.publishedAt);
-          const safeLink = escapeHtml(item.url || "#");
-          const safeThumb = escapeHtml(thumbnailFor(item));
-
-          return `
-            <a
-              href="${safeLink}"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-video-index="${index}"
-              class="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-soft ring-1 ring-slate-200/60 hover:shadow-glow hover:-translate-y-0.5 transition-all duration-300"
-            >
-              <div class="relative aspect-video overflow-hidden bg-slate-200">
-                <img
-                  src="${safeThumb}"
-                  alt="${safeTitle}"
-                  loading="lazy"
-                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span class="flex h-14 w-14 items-center justify-center rounded-full bg-white/95 text-rose-500 shadow-lg ring-1 ring-black/5 backdrop-blur">
-                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </span>
-                </div>
-                <span class="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
-                  YouTube
-                </span>
-              </div>
-
-              <div class="flex flex-col gap-2 p-4 flex-grow">
-                <h3 class="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-rose-600 transition-colors">
-                  ${safeTitle}
-                </h3>
-                <div class="mt-auto flex items-center justify-between pt-3 text-xs text-slate-400">
-                  <span class="inline-flex items-center gap-1">
-                    <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-                    </svg>
-                    ${escapeHtml(published)}
-                  </span>
-                  <span class="inline-flex items-center gap-1 text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Watch
-                    <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M5 12h14M13 5l7 7-7 7"/>
-                    </svg>
-                  </span>
-                </div>
-              </div>
-            </a>
-          `;
-        }).join("")}
+      <div data-video-grid class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
+        ${initialItems.map((item, index) => videoCardHtml(item, index)).join("")}
       </div>
     </div>
   `;
@@ -209,7 +217,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
   });
   closeBtn?.addEventListener("click", closePlayer);
 
-  section.querySelectorAll("[data-video-index]").forEach((anchor) => {
+  const attachCardClickHandler = (anchor) => {
     anchor.addEventListener("click", (event) => {
       // Let modified clicks (new tab / new window) and non-primary buttons
       // fall through to the normal link behavior.
@@ -222,7 +230,43 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       event.preventDefault();
       playAt(index);
     });
-  });
+  };
+
+  const grid = section.querySelector("[data-video-grid]");
+  grid?.querySelectorAll("[data-video-index]").forEach(attachCardClickHandler);
+
+  // Lazily render remaining cards in batches as the user scrolls near the
+  // bottom, instead of building hundreds of DOM nodes for large channels
+  // and playlists up front.
+  let renderedCount = initialItems.length;
+  if (grid && renderedCount < items.length && typeof IntersectionObserver !== "undefined") {
+    const sentinel = document.createElement("div");
+    sentinel.className = "col-span-full h-1";
+    grid.appendChild(sentinel);
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+
+      const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
+      if (!nextItems.length) return;
+
+      const temp = document.createElement("div");
+      temp.innerHTML = nextItems
+        .map((item, i) => videoCardHtml(item, renderedCount + i))
+        .join("");
+      [...temp.children].forEach((card) => {
+        grid.insertBefore(card, sentinel);
+        attachCardClickHandler(card);
+      });
+      renderedCount += nextItems.length;
+
+      if (renderedCount >= items.length) {
+        observer.disconnect();
+        sentinel.remove();
+      }
+    });
+    observer.observe(sentinel);
+  }
 
   return section;
 };
