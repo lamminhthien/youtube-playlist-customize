@@ -4,6 +4,7 @@ import {
   fetchPlaylist,
   fetchChannel,
   renderPlaylist,
+  renderPlayHistory,
   renderError,
   renderTabs,
   renderSkeleton,
@@ -49,6 +50,7 @@ container.innerHTML = "";
 renderTabs(container)([
   buildSection("Channels", Object.entries(CHANNEL_ID), fetchChannel, "channel"),
   buildSection("Custom Playlist", Object.entries(PLAY_LIST_ID), fetchPlaylist, "playlist"),
+  { name: "Play History", load: async () => renderPlayHistory() },
 ]);
 
 

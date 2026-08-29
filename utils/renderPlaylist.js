@@ -1,61 +1,6 @@
 import { escapeHtml } from "./escapeHtml.js";
-
-const formatDate = (input) => {
-  if (!input) return "";
-  const d = new Date(input);
-  if (Number.isNaN(d.getTime())) return String(input);
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-};
-
-const videoIdFromUrl = (url) => {
-  if (!url) return "";
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) {
-      return u.pathname.slice(1);
-    }
-    return u.searchParams.get("v") || "";
-  } catch {
-    return "";
-  }
-};
-
-const thumbnailFor = (item) =>
-  item.thumbnail ||
-  (videoIdFromUrl(item.url) &&
-    `https://i.ytimg.com/vi/${videoIdFromUrl(item.url)}/hqdefault.jpg`);
-
-const videoIdOf = (item) => item?.id || videoIdFromUrl(item?.url);
-
-const WATCHED_STORAGE_KEY = "yt-watched-videos";
-
-// Stored oldest-to-newest so the most recently watched video is always last.
-const getWatchedVideos = () => {
-  try {
-    const raw = localStorage.getItem(WATCHED_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const HISTORY_LIMIT = 20;
-
-const markVideoWatched = (videoId) => {
-  if (!videoId) return;
-  try {
-    const watched = getWatchedVideos().filter((id) => id !== videoId);
-    watched.push(videoId);
-    localStorage.setItem(WATCHED_STORAGE_KEY, JSON.stringify(watched.slice(-HISTORY_LIMIT)));
-  } catch {
-    // localStorage unavailable (e.g. private mode quota) — skip persisting.
-  }
-};
+import { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
+import { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
 
 // Rendering every card up front is what makes large channels/playlists feel
 // slow (hundreds of DOM nodes at once). Instead we render an initial batch
@@ -89,24 +34,6 @@ const videoCardHtml = (item, index, watchedVideos) => {
   `;
 };
 
-const historyItemHtml = (item, index) => {
-  const safeTitle = escapeHtml(item.title);
-  const safeThumb = escapeHtml(thumbnailFor(item));
-
-  return `
-    <a
-      href="${escapeHtml(item.url || "#")}"
-      target="_blank"
-      rel="noopener noreferrer"
-      data-history-index="${index}"
-      class="yt-history-item"
-    >
-      <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" />
-      <span class="yt-history-item-title line-clamp-2">${safeTitle}</span>
-    </a>
-  `;
-};
-
 export const renderPlaylist = ({ name, playlistId, data }) => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
@@ -120,49 +47,31 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     : `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId || "")}`;
   const showPlayAll = Boolean(playlistId) && count > 0;
   const initialItems = items.slice(0, RENDER_BATCH_SIZE);
-  const watchedOrder = getWatchedVideos();
-  const watchedVideos = new Set(watchedOrder);
-
-  // Most-recently-watched first, limited to videos still present in this playlist.
-  const historyIndexes = [...watchedOrder]
-    .reverse()
-    .map((videoId) => items.findIndex((item) => videoIdOf(item) === videoId))
-    .filter((index) => index !== -1)
-    .slice(0, HISTORY_LIMIT);
+  const watchedVideos = new Set(getWatchedVideos().map((entry) => entry.id));
 
   section.innerHTML = `
-    <div class="yt-playlist-layout">
-      <div class="yt-playlist">
-        <div class="yt-playlist-header">
-          <h2 class="yt-playlist-title">${title}</h2>
-          <div>
-            <span class="yt-count-badge">${count} video${count === 1 ? "" : "s"}</span>
-            ${showPlayAll ? `
-            <a
-              href="${escapeHtml(playAllUrl)}"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-play-all
-              aria-label="Play all videos in this playlist on YouTube"
-              class="yt-btn"
-            >
-              ▶ Play all
-            </a>` : ""}
-          </div>
-        </div>
-
-        <div data-video-grid class="yt-video-list">
-          ${initialItems.map((item, index) => videoCardHtml(item, index, watchedVideos)).join("")}
+    <div class="yt-playlist">
+      <div class="yt-playlist-header">
+        <h2 class="yt-playlist-title">${title}</h2>
+        <div>
+          <span class="yt-count-badge">${count} video${count === 1 ? "" : "s"}</span>
+          ${showPlayAll ? `
+          <a
+            href="${escapeHtml(playAllUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-play-all
+            aria-label="Play all videos in this playlist on YouTube"
+            class="yt-btn"
+          >
+            ▶ Play all
+          </a>` : ""}
         </div>
       </div>
 
-      ${historyIndexes.length ? `
-      <aside class="yt-history-panel">
-        <h3 class="yt-history-title">Play History</h3>
-        <div data-history-list class="yt-history-list">
-          ${historyIndexes.map((index) => historyItemHtml(items[index], index)).join("")}
-        </div>
-      </aside>` : ""}
+      <div data-video-grid class="yt-video-list">
+        ${initialItems.map((item, index) => videoCardHtml(item, index, watchedVideos)).join("")}
+      </div>
     </div>
   `;
 
@@ -194,7 +103,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       if (Number.isNaN(index)) return;
 
       anchor.classList.add("yt-watched");
-      markVideoWatched(videoIdOf(items[index]));
+      markVideoWatched(items[index]);
 
       // Let modified clicks (new tab / new window) and non-primary buttons
       // fall through to the normal link behavior.
@@ -208,23 +117,6 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   const grid = section.querySelector("[data-video-grid]");
   grid?.querySelectorAll("[data-video-index]").forEach(attachCardClickHandler);
-
-  const attachHistoryClickHandler = (anchor) => {
-    anchor.addEventListener("click", (event) => {
-      const index = Number(anchor.getAttribute("data-history-index"));
-      if (Number.isNaN(index)) return;
-
-      markVideoWatched(videoIdOf(items[index]));
-
-      if (event.button && event.button !== 0) return;
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-      event.preventDefault();
-      openInPlayerTab(index);
-    });
-  };
-
-  section.querySelectorAll("[data-history-index]").forEach(attachHistoryClickHandler);
 
   // Lazily render remaining cards in batches as the user scrolls near the
   // bottom, instead of building hundreds of DOM nodes for large channels

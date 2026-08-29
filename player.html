@@ -30,14 +30,20 @@
       const WATCHED_STORAGE_KEY = "yt-watched-videos";
       const params = new URLSearchParams(window.location.search);
 
-      const markVideoWatched = (videoId) => {
-        if (!videoId) return;
+      const markVideoWatched = (entry) => {
+        if (!entry?.id) return;
         try {
           const raw = localStorage.getItem(WATCHED_STORAGE_KEY);
           const parsed = raw ? JSON.parse(raw) : [];
-          const watched = new Set(Array.isArray(parsed) ? parsed : []);
-          watched.add(videoId);
-          localStorage.setItem(WATCHED_STORAGE_KEY, JSON.stringify([...watched]));
+          const watched = (Array.isArray(parsed) ? parsed : []).filter((it) => it.id !== entry.id);
+          watched.push({
+            id: entry.id,
+            title: entry.title || "",
+            url: `https://www.youtube.com/watch?v=${entry.id}`,
+            thumbnail: `https://i.ytimg.com/vi/${entry.id}/hqdefault.jpg`,
+            watchedAt: Date.now(),
+          });
+          localStorage.setItem(WATCHED_STORAGE_KEY, JSON.stringify(watched.slice(-50)));
         } catch {
           // localStorage unavailable (e.g. private mode quota) — skip persisting.
         }
@@ -72,7 +78,7 @@
         currentIndex += 1;
         const entry = queue[currentIndex];
         setTitleFor(currentIndex);
-        markVideoWatched(entry.id);
+        markVideoWatched(entry);
         player?.loadVideoById(entry.id);
       };
 
@@ -83,7 +89,7 @@
           return;
         }
         setTitleFor(currentIndex);
-        markVideoWatched(entry.id);
+        markVideoWatched(entry);
         player = new YT.Player("player-target", {
           host: "https://www.youtube-nocookie.com",
           videoId: entry.id,
