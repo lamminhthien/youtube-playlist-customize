@@ -2,45 +2,18 @@ import { escapeHtml } from "./escapeHtml.js";
 import { renderError } from "./renderError.js";
 import { renderSkeleton } from "./renderSkeleton.js";
 
-const TAB_BASE = [
-  "relative",
-  "px-4",
-  "py-2",
-  "rounded-full",
-  "text-sm",
-  "font-medium",
-  "transition-all",
-  "duration-200",
-  "focus:outline-none",
-  "focus-visible:ring-2",
-  "focus-visible:ring-rose-400",
-  "focus-visible:ring-offset-2",
-];
+const TAB_BASE = ["yt-tab"];
 
-const ACTIVE_TAB = [
-  "bg-gradient-to-r",
-  "from-rose-500",
-  "to-indigo-500",
-  "text-white",
-  "shadow-glow",
-];
+const ACTIVE_TAB = ["yt-tab-active"];
 
-const INACTIVE_TAB = [
-  "bg-white/70",
-  "text-slate-600",
-  "ring-1",
-  "ring-slate-200",
-  "hover:text-slate-900",
-  "hover:bg-white",
-];
+const INACTIVE_TAB = ["yt-tab-inactive"];
 
 export const renderTabs = (container) => (tabs) => {
   container.innerHTML = "";
 
   if (!tabs.length) {
     const empty = document.createElement("div");
-    empty.className =
-      "rounded-2xl bg-white/80 backdrop-blur p-10 text-center text-slate-500 shadow-soft ring-1 ring-slate-200/60";
+    empty.className = "yt-empty rounded-2xl";
     empty.textContent = "No playlists configured.";
     container.appendChild(empty);
     return;
@@ -51,7 +24,7 @@ export const renderTabs = (container) => (tabs) => {
   const tablist = document.createElement("div");
   tablist.setAttribute("role", "tablist");
   tablist.setAttribute("aria-label", "Playlists");
-  tablist.className = "flex flex-wrap items-center gap-2 mb-6";
+  tablist.className = "yt-tabbar";
 
   const tabBtns = [];
   const panels = [];

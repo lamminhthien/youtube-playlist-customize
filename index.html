@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f43f5e" />
+    <meta name="theme-color" content="#cc0000" />
     <meta name="description" content="All your curated YouTube playlists in one calm, distraction-free place." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -12,72 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./logo.svg" />
     <title>Playlist Hub · LMT</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-            },
-            boxShadow: {
-              soft: "0 10px 30px -12px rgba(15, 23, 42, 0.18)",
-              glow: "0 20px 45px -20px rgba(244, 63, 94, 0.55)",
-            },
-            keyframes: {
-              shimmer: {
-                "0%": { backgroundPosition: "-400px 0" },
-                "100%": { backgroundPosition: "400px 0" },
-              },
-              fadein: {
-                "0%": { opacity: "0", transform: "translateY(8px)" },
-                "100%": { opacity: "1", transform: "translateY(0)" },
-              },
-            },
-            animation: {
-              shimmer: "shimmer 1.6s linear infinite",
-              fadein: "fadein .5s ease-out both",
-            },
-          },
-        },
-      };
-    </script>
-    <style>
-      html,
-      body {
-        font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-      }
-      .skeleton {
-        background: linear-gradient(
-          90deg,
-          rgba(226, 232, 240, 0.6) 0%,
-          rgba(241, 245, 249, 0.9) 50%,
-          rgba(226, 232, 240, 0.6) 100%
-        );
-        background-size: 800px 100%;
-        animation: shimmer 1.6s linear infinite;
-      }
-      @keyframes shimmer {
-        0% {
-          background-position: -400px 0;
-        }
-        100% {
-          background-position: 400px 0;
-        }
-      }
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    </style>
+    <link rel="stylesheet" href="./styles.css" />
     <script type="module" src="./index.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
@@ -89,124 +24,63 @@
       }
     </script>
   </head>
-  <body
-    class="relative min-h-screen text-slate-800 bg-gradient-to-br from-slate-50 via-rose-50 to-indigo-50"
-  >
-    <!-- decorative blobs -->
-    <div
-      aria-hidden="true"
-      class="pointer-events-none absolute -top-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-rose-300/30 blur-3xl"
-    ></div>
-    <div
-      aria-hidden="true"
-      class="pointer-events-none absolute top-40 -right-32 h-[28rem] w-[28rem] rounded-full bg-indigo-300/30 blur-3xl"
-    ></div>
-
-    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <!-- Header -->
-      <header class="mb-10">
-        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <img
-              src="./logo.svg"
-              alt="Playlist Hub logo"
-              width="72"
-              height="72"
-              class="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl shadow-soft ring-1 ring-rose-200/60 bg-white"
-            />
-            <div>
-              <span
-                class="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-200 shadow-sm"
-              >
-                <span class="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                LMT · YouTube Feed
-              </span>
-              <h1
-                class="mt-3 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900"
-              >
-                <span
-                  class="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-indigo-500 bg-clip-text text-transparent"
-                  >Playlist</span
-                >
-                Hub
-              </h1>
-              <p class="mt-2 text-slate-500 max-w-xl">
-                All your curated playlists in one calm, distraction-free place.
-              </p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <div
-              class="hidden sm:flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 shadow-sm"
-            >
-              <svg
-                class="h-4 w-4 text-rose-500"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-              </svg>
-              Updated continuously
-            </div>
-
-            <button
-              id="clear-cache-btn"
-              title="Clear cached files and reload"
-              onclick="(async () => {
-                const btn = document.getElementById('clear-cache-btn');
-                btn.disabled = true;
-                btn.setAttribute('aria-busy', 'true');
-                const icon = btn.querySelector('.btn-icon');
-                icon.classList.add('animate-spin');
-                try {
-                  if ('serviceWorker' in navigator) {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    await Promise.all(regs.map(r => r.unregister()));
-                  }
-                  if ('caches' in window) {
-                    const keys = await caches.keys();
-                    await Promise.all(keys.map(k => caches.delete(k)));
-                  }
-                  window.location.reload(true);
-                } catch (e) {
-                  console.error('Cache clear failed:', e);
-                  btn.disabled = false;
-                  btn.removeAttribute('aria-busy');
-                  icon.classList.remove('animate-spin');
-                }
-              })()"
-              class="flex items-center gap-2 rounded-full bg-white/70 backdrop-blur px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 shadow-sm transition hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-200 hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <svg
-                class="btn-icon h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-              Clear Cache
-            </button>
+  <body>
+    <div class="yt-page">
+      <header class="yt-header">
+        <div class="yt-logo-row">
+          <img src="./logo.svg" alt="Playlist Hub logo" width="40" height="40" />
+          <div>
+            <div class="yt-wordmark"><span class="yt-wordmark-accent">Play</span>listHub</div>
+            <p class="yt-tagline">All your curated playlists in one place.</p>
           </div>
         </div>
+
+        <button
+          id="clear-cache-btn"
+          title="Clear cached files and reload"
+          onclick="(async () => {
+            const btn = document.getElementById('clear-cache-btn');
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            const icon = btn.querySelector('.yt-btn-icon');
+            icon.classList.add('spinning');
+            try {
+              if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(r => r.unregister()));
+              }
+              if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(k => caches.delete(k)));
+              }
+              window.location.reload(true);
+            } catch (e) {
+              console.error('Cache clear failed:', e);
+              btn.disabled = false;
+              btn.removeAttribute('aria-busy');
+              icon.classList.remove('spinning');
+            }
+          })()"
+          class="yt-btn"
+        >
+          <svg
+            class="yt-btn-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          Clear Cache
+        </button>
       </header>
 
-
-      <main
-        id="app-container"
-        aria-live="polite"
-      ></main>
+      <main id="app-container" class="yt-main" aria-live="polite"></main>
     </div>
   </body>
 </html>
