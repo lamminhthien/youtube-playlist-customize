@@ -31,16 +31,40 @@ const thumbnailFor = (item) =>
 
 const videoIdOf = (item) => item?.id || videoIdFromUrl(item?.url);
 
+const WATCHED_STORAGE_KEY = "yt-watched-videos";
+
+const getWatchedVideos = () => {
+  try {
+    const raw = localStorage.getItem(WATCHED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+};
+
+const markVideoWatched = (videoId) => {
+  if (!videoId) return;
+  try {
+    const watched = getWatchedVideos();
+    watched.add(videoId);
+    localStorage.setItem(WATCHED_STORAGE_KEY, JSON.stringify([...watched]));
+  } catch {
+    // localStorage unavailable (e.g. private mode quota) — skip persisting.
+  }
+};
+
 // Rendering every card up front is what makes large channels/playlists feel
 // slow (hundreds of DOM nodes at once). Instead we render an initial batch
 // and lazily render the rest as the user scrolls near the bottom.
 const RENDER_BATCH_SIZE = 24;
 
-const videoCardHtml = (item, index) => {
+const videoCardHtml = (item, index, watchedVideos) => {
   const safeTitle = escapeHtml(item.title);
   const published = formatDate(item.publishedAt);
   const safeLink = escapeHtml(item.url || "#");
   const safeThumb = escapeHtml(thumbnailFor(item));
+  const isWatched = watchedVideos.has(videoIdOf(item));
 
   return `
     <a
@@ -48,7 +72,7 @@ const videoCardHtml = (item, index) => {
       target="_blank"
       rel="noopener noreferrer"
       data-video-index="${index}"
-      class="yt-video-row"
+      class="yt-video-row${isWatched ? " yt-watched" : ""}"
     >
       <div class="yt-thumb-wrap">
         <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" />
@@ -75,6 +99,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     : `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId || "")}`;
   const showPlayAll = Boolean(playlistId) && count > 0;
   const initialItems = items.slice(0, RENDER_BATCH_SIZE);
+  const watchedVideos = getWatchedVideos();
 
   section.innerHTML = `
     <div class="yt-playlist">
@@ -97,7 +122,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       </div>
 
       <div data-video-grid class="yt-video-list">
-        ${initialItems.map((item, index) => videoCardHtml(item, index)).join("")}
+        ${initialItems.map((item, index) => videoCardHtml(item, index, watchedVideos)).join("")}
       </div>
     </div>
   `;
@@ -126,13 +151,16 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   const attachCardClickHandler = (anchor) => {
     anchor.addEventListener("click", (event) => {
+      const index = Number(anchor.getAttribute("data-video-index"));
+      if (Number.isNaN(index)) return;
+
+      anchor.classList.add("yt-watched");
+      markVideoWatched(videoIdOf(items[index]));
+
       // Let modified clicks (new tab / new window) and non-primary buttons
       // fall through to the normal link behavior.
       if (event.button && event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-      const index = Number(anchor.getAttribute("data-video-index"));
-      if (Number.isNaN(index)) return;
 
       event.preventDefault();
       openInPlayerTab(index);
@@ -159,7 +187,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
       const temp = document.createElement("div");
       temp.innerHTML = nextItems
-        .map((item, i) => videoCardHtml(item, renderedCount + i))
+        .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
         .join("");
       [...temp.children].forEach((card) => {
         grid.insertBefore(card, sentinel);

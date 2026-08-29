@@ -27,7 +27,21 @@
     <div id="player-wrap"><div id="player-target"></div></div>
     <script>
       const QUEUE_STORAGE_KEY = "yt-player-queue";
+      const WATCHED_STORAGE_KEY = "yt-watched-videos";
       const params = new URLSearchParams(window.location.search);
+
+      const markVideoWatched = (videoId) => {
+        if (!videoId) return;
+        try {
+          const raw = localStorage.getItem(WATCHED_STORAGE_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          const watched = new Set(Array.isArray(parsed) ? parsed : []);
+          watched.add(videoId);
+          localStorage.setItem(WATCHED_STORAGE_KEY, JSON.stringify([...watched]));
+        } catch {
+          // localStorage unavailable (e.g. private mode quota) — skip persisting.
+        }
+      };
 
       // Prefer the full queue stashed in localStorage by the app (so we can
       // auto-advance), falling back to a single video if it's missing.
@@ -58,6 +72,7 @@
         currentIndex += 1;
         const entry = queue[currentIndex];
         setTitleFor(currentIndex);
+        markVideoWatched(entry.id);
         player?.loadVideoById(entry.id);
       };
 
@@ -68,6 +83,7 @@
           return;
         }
         setTitleFor(currentIndex);
+        markVideoWatched(entry.id);
         player = new YT.Player("player-target", {
           host: "https://www.youtube-nocookie.com",
           videoId: entry.id,

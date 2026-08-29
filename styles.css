@@ -344,6 +344,10 @@ a:hover {
   color: #767676;
 }
 
+.yt-video-row.yt-watched .yt-video-title {
+  color: #1a7f37;
+}
+
 /* ---------- skeleton (loading placeholder) ---------- */
 
 .skeleton {
