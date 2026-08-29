@@ -96,73 +96,33 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
         </div>
       </div>
 
-      <div data-player-panel class="hidden yt-player-panel">
-        <div class="yt-player-frame-wrap">
-          <div data-player-frame></div>
-        </div>
-        <div class="yt-player-controls">
-          <h4 data-player-title class="yt-player-title"></h4>
-          <div class="yt-player-buttons">
-            <button type="button" data-player-prev aria-label="Previous video" class="yt-icon-btn">◀</button>
-            <button type="button" data-player-next aria-label="Next video" class="yt-icon-btn">▶</button>
-            <button type="button" data-player-close aria-label="Close player" class="yt-icon-btn">✕</button>
-          </div>
-        </div>
-      </div>
-
       <div data-video-grid class="yt-video-list">
         ${initialItems.map((item, index) => videoCardHtml(item, index)).join("")}
       </div>
     </div>
   `;
 
-  // Lightweight inline player: no iframe is ever loaded for a video until
-  // the user actually clicks it, and only one iframe exists per playlist
-  // section at a time (reused across next/prev navigation).
-  const panel = section.querySelector("[data-player-panel]");
-  const frame = section.querySelector("[data-player-frame]");
-  const playerTitle = section.querySelector("[data-player-title]");
-  const prevBtn = section.querySelector("[data-player-prev]");
-  const nextBtn = section.querySelector("[data-player-next]");
-  const closeBtn = section.querySelector("[data-player-close]");
+  // Clicking a video opens a single dedicated tab (player.html) that plays
+  // the whole queue back-to-back, auto-advancing to the next video when one
+  // ends, instead of juggling an inline player embedded in this page.
+  const QUEUE_STORAGE_KEY = "yt-player-queue";
 
-  let currentIndex = -1;
-
-  const playAt = (index) => {
+  const openInPlayerTab = (index) => {
     const item = items[index];
     const videoId = videoIdOf(item);
     if (!item || !videoId) return;
 
-    currentIndex = index;
-    frame.innerHTML = `
-      <iframe
-        src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1"
-        title="${escapeHtml(item.title || "YouTube video player")}"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen
-      ></iframe>
-    `;
-    playerTitle.textContent = item.title || "";
-    prevBtn.disabled = currentIndex <= 0;
-    nextBtn.disabled = currentIndex >= items.length - 1;
-    panel.classList.remove("hidden");
-    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  };
+    try {
+      const queue = items.map((it) => ({ id: videoIdOf(it), title: it.title || "" }));
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify({ items: queue, listId: playlistId || "" }));
+    } catch {
+      // localStorage unavailable (e.g. private mode quota) — player.html falls back to a single video.
+    }
 
-  const closePlayer = () => {
-    frame.innerHTML = "";
-    panel.classList.add("hidden");
-    currentIndex = -1;
+    const params = new URLSearchParams({ v: videoId, i: String(index), title: item.title || "YouTube video player" });
+    if (playlistId) params.set("list", playlistId);
+    window.open(`player.html?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
-
-  prevBtn?.addEventListener("click", () => {
-    if (currentIndex > 0) playAt(currentIndex - 1);
-  });
-  nextBtn?.addEventListener("click", () => {
-    if (currentIndex < items.length - 1) playAt(currentIndex + 1);
-  });
-  closeBtn?.addEventListener("click", closePlayer);
 
   const attachCardClickHandler = (anchor) => {
     anchor.addEventListener("click", (event) => {
@@ -175,7 +135,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       if (Number.isNaN(index)) return;
 
       event.preventDefault();
-      playAt(index);
+      openInPlayerTab(index);
     });
   };
 

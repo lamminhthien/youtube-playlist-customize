@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <title>Playing…</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+      }
+      #player-wrap {
+        position: fixed;
+        inset: 0;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="player-wrap"><div id="player-target"></div></div>
+    <script>
+      const QUEUE_STORAGE_KEY = "yt-player-queue";
+      const params = new URLSearchParams(window.location.search);
+
+      // Prefer the full queue stashed in localStorage by the app (so we can
+      // auto-advance), falling back to a single video if it's missing.
+      let queue = [];
+      try {
+        const stored = JSON.parse(localStorage.getItem(QUEUE_STORAGE_KEY) || "null");
+        if (stored && Array.isArray(stored.items) && stored.items.length) {
+          queue = stored.items;
+        }
+      } catch {
+        queue = [];
+      }
+      if (!queue.length) {
+        const v = params.get("v");
+        if (v) queue = [{ id: v, title: params.get("title") || "" }];
+      }
+
+      const startIndex = Number(params.get("i"));
+      let currentIndex = Number.isInteger(startIndex) && queue[startIndex] ? startIndex : 0;
+      let player;
+
+      const setTitleFor = (index) => {
+        document.title = queue[index]?.title || "YouTube video player";
+      };
+
+      const playNext = () => {
+        if (currentIndex >= queue.length - 1) return;
+        currentIndex += 1;
+        const entry = queue[currentIndex];
+        setTitleFor(currentIndex);
+        player?.loadVideoById(entry.id);
+      };
+
+      window.onYouTubeIframeAPIReady = () => {
+        const entry = queue[currentIndex];
+        if (!entry) {
+          document.getElementById("player-wrap").textContent = "No video specified.";
+          return;
+        }
+        setTitleFor(currentIndex);
+        player = new YT.Player("player-target", {
+          host: "https://www.youtube-nocookie.com",
+          videoId: entry.id,
+          playerVars: { autoplay: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+          events: {
+            onStateChange: (event) => {
+              if (event.data === YT.PlayerState.ENDED) playNext();
+            },
+          },
+        });
+      };
+
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.body.appendChild(tag);
+    </script>
+  </body>
+</html>
