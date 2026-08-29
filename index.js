@@ -7,6 +7,7 @@ import {
   renderError,
   renderTabs,
   renderSkeleton,
+  renderPicker,
 } from "./utils/index.js";
 
 // Each entry tab gets:
@@ -30,11 +31,19 @@ const buildEntryTabs = (entries, fetcher) =>
 // Top-level "Channels" / "Custom Playlist" tabs. Each is itself lazily
 // loaded — its nested tab bar (and the first entry's data) is only built the
 // first time the section is activated, so both sections never render at once.
+// Rather than jumping straight into the first entry's videos, we first show
+// a picker of icons for every entry so the user chooses what to load.
 const buildSection = (name, entries, fetcher) => ({
   name,
   load: async () => {
     const wrapper = document.createElement("div");
-    renderTabs(wrapper)(buildEntryTabs(entries, fetcher));
+    renderPicker(
+      wrapper,
+      entries.map(([entryName]) => entryName),
+      (index) => {
+        renderTabs(wrapper)(buildEntryTabs(entries, fetcher), index);
+      }
+    );
     return wrapper;
   },
 });

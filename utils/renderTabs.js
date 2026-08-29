@@ -8,7 +8,7 @@ const ACTIVE_TAB = ["yt-tab-active"];
 
 const INACTIVE_TAB = ["yt-tab-inactive"];
 
-export const renderTabs = (container) => (tabs) => {
+export const renderTabs = (container) => (tabs, initialIndex = 0) => {
   container.innerHTML = "";
 
   if (!tabs.length) {
@@ -67,7 +67,7 @@ export const renderTabs = (container) => (tabs) => {
   tabs.forEach((tab, index) => {
     const panel = document.createElement("div");
     panel.setAttribute("role", "tabpanel");
-    panel.className = index === 0 ? "" : "hidden";
+    panel.className = index === initialIndex ? "" : "hidden";
     // Lazy tabs may omit `element`; their content arrives via the `load`
     // callback the first time they become active.
     if (tab.element) {
@@ -78,12 +78,12 @@ export const renderTabs = (container) => (tabs) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.setAttribute("role", "tab");
-    btn.setAttribute("aria-selected", index === 0 ? "true" : "false");
-    btn.setAttribute("tabindex", index === 0 ? "0" : "-1");
+    btn.setAttribute("aria-selected", index === initialIndex ? "true" : "false");
+    btn.setAttribute("tabindex", index === initialIndex ? "0" : "-1");
     btn.textContent = tab.name;
     btn.className = [
       ...TAB_BASE,
-      ...(index === 0 ? ACTIVE_TAB : INACTIVE_TAB),
+      ...(index === initialIndex ? ACTIVE_TAB : INACTIVE_TAB),
     ].join(" ");
     btn.addEventListener("click", () => {
       setActive(index);
@@ -106,5 +106,5 @@ export const renderTabs = (container) => (tabs) => {
 
   // Kick off the lazy load for the initially-active tab so the user sees
   // real content (not just a skeleton) without an extra click.
-  loadTabContent(panels[0], tabs[0]);
+  loadTabContent(panels[initialIndex], tabs[initialIndex]);
 };

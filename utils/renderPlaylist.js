@@ -138,7 +138,6 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       <iframe
         src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0&modestbranding=1"
         title="${escapeHtml(item.title || "YouTube video player")}"
-        class="h-full w-full"
         frameborder="0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
