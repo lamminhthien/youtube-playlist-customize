@@ -34,7 +34,6 @@ export const renderPlayHistory = () => {
   const section = document.createElement("section");
   section.className = "animate-fadein";
 
-  // Most-recently-watched first.
   const history = [...getWatchedVideos()].reverse();
   const count = history.length;
 
@@ -60,9 +59,7 @@ export const renderPlayHistory = () => {
     try {
       const queue = history.map((it) => ({ id: it.id, title: it.title || "" }));
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify({ items: queue, listId: "" }));
-    } catch {
-      // localStorage unavailable (e.g. private mode quota) — player.html falls back to a single video.
-    }
+    } catch {}
 
     const params = new URLSearchParams({ v: entry.id, i: String(index), title: entry.title || "YouTube video player" });
     window.open(`player.html?${params.toString()}`, "_blank", "noopener,noreferrer");

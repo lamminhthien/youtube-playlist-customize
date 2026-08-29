@@ -6,7 +6,9 @@ globalThis.document = document;
 
 const { escapeHtml } = await import("../utils/escapeHtml.js");
 const { fetchPlaylist } = await import("../utils/fetchPlaylist.js");
-const { PLAYLIST_API_URL } = await import("../constants/config.js");
+const { fetchChannel } = await import("../utils/fetchChannel.js");
+const { fetchIcon } = await import("../utils/fetchIcon.js");
+const { PLAYLIST_API_URL, CHANNEL_API_URL, ICON_API_URL } = await import("../constants/config.js");
 
 describe("escapeHtml", () => {
   test("escapes the five HTML-significant characters", () => {
@@ -211,6 +213,179 @@ describe("fetchPlaylist (local youtubei.js API endpoint)", () => {
         fetchPlaylist(["My Playlist", "PL123"]),
         /Unexpected token/
       );
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("fetchChannel (local youtubei.js API endpoint)", () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  function restore() {
+    globalThis.fetch = originalFetch;
+  }
+
+  test("calls the local API endpoint with ?id=<channelId>", async () => {
+    let captured;
+    globalThis.fetch = async (url, init) => {
+      captured = { url, init };
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "success", items: [] }),
+      };
+    };
+    try {
+      await fetchChannel(["My Channel", "UC123"]);
+      assert.equal(captured.url, `${CHANNEL_API_URL}?id=UC123`);
+      assert.equal(captured.init.method, "GET");
+      assert.equal(captured.init.redirect, "follow");
+    } finally {
+      restore();
+    }
+  });
+
+  test("returns { name, playlistId: undefined, data } on success", async () => {
+    const apiPayload = {
+      status: "success",
+      feed: { title: "Channel Title" },
+      items: [
+        { id: "v1", title: "Video 1" },
+      ],
+    };
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => apiPayload,
+    });
+    try {
+      const result = await fetchChannel(["My Channel", "UC123"]);
+      assert.deepEqual(result, {
+        name: "My Channel",
+        playlistId: undefined,
+        data: apiPayload,
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  test("throws an error containing the channel name when status is not 'success'", async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "error", message: "bad channel" }),
+    });
+    try {
+      await assert.rejects(
+        fetchChannel(["My Channel", "UC123"]),
+        /Failed to load channel: My Channel/
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  test("throws when the HTTP response is not ok", async () => {
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    });
+    try {
+      await assert.rejects(
+        fetchChannel(["My Channel", "UC123"]),
+        /HTTP 404/
+      );
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("fetchIcon (local youtubei.js API endpoint)", () => {
+  let originalFetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  function restore() {
+    globalThis.fetch = originalFetch;
+  }
+
+  test("calls the local API endpoint with ?type=...&id=...", async () => {
+    let captured;
+    globalThis.fetch = async (url) => {
+      captured = url;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ status: "success", icon: "http://icon.url" }),
+      };
+    };
+    try {
+      const result = await fetchIcon("channel", "UC123");
+      assert.equal(captured, `${ICON_API_URL}?type=channel&id=UC123`);
+      assert.equal(result, "http://icon.url");
+    } finally {
+      restore();
+    }
+  });
+
+  test("returns empty string when HTTP response is not ok", async () => {
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 404,
+    });
+    try {
+      const result = await fetchIcon("channel", "UC123");
+      assert.equal(result, "");
+    } finally {
+      restore();
+    }
+  });
+
+  test("returns empty string when status is not 'success'", async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "error" }),
+    });
+    try {
+      const result = await fetchIcon("channel", "UC123");
+      assert.equal(result, "");
+    } finally {
+      restore();
+    }
+  });
+
+  test("returns empty string when icon property is missing", async () => {
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "success" }),
+    });
+    try {
+      const result = await fetchIcon("channel", "UC123");
+      assert.equal(result, "");
+    } finally {
+      restore();
+    }
+  });
+
+  test("returns empty string when fetch throws", async () => {
+    globalThis.fetch = async () => {
+      throw new Error("Network Error");
+    };
+    try {
+      const result = await fetchIcon("channel", "UC123");
+      assert.equal(result, "");
     } finally {
       restore();
     }
