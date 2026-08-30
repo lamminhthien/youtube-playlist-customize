@@ -257,83 +257,83 @@ html, body {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background: radial-gradient(900px 600px at 12% 8%, rgba(99,102,241,0.14), transparent 60%),
-    radial-gradient(800px 500px at 88% 12%, rgba(236,72,153,0.12), transparent 60%),
-    radial-gradient(900px 700px at 50% 92%, rgba(249,115,22,0.08), transparent 60%),
-    radial-gradient(700px 500px at 20% 88%, rgba(52,199,89,0.07), transparent 60%),
-    linear-gradient(180deg, #ffffff 0%, #fdfcff 28%, #fef8f3 62%, #f5f7ff 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,248,235,0.42) 38%, rgba(255,255,255,0.74) 74%, #fdfcff 100%),
+    url('https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=2200&q=80') center 34% / cover no-repeat;
+  filter: saturate(1.08) contrast(1.02);
 }
 .liquid-bg::before {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.52;
-  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(99,102,241,0.04) 35%, rgba(236,72,153,0.03) 72%, transparent 100%),
-    radial-gradient(1200px 380px at 50% -8%, rgba(255,255,255,0.9), transparent 70%);
+  opacity: 0.92;
+  background: radial-gradient(1200px 420px at 50% -6%, rgba(255,255,255,0.88), transparent 72%),
+    linear-gradient(180deg, rgba(255,255,255,0.0) 42%, rgba(255,250,240,0.55) 78%, rgba(253,252,255,0.92) 100%),
+    radial-gradient(900px 500px at 18% 18%, rgba(255,184,106,0.10), transparent 62%);
   pointer-events: none;
 }
 .liquid-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.22;
+  opacity: 0.18;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
 }
 .liquid-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(64px);
+  filter: blur(68px);
   will-change: transform;
-  animation: orbFloat 18s ease-in-out infinite;
-  opacity: 0.95;
+  animation: orbFloat 22s ease-in-out infinite;
+  opacity: 0.88;
 }
 .liquid-orb--1 {
-  width: 920px;
+  width: 980px;
   height: 720px;
   left: -10%;
-  top: -14%;
-  background: radial-gradient(circle at 50% 50%, rgba(99,102,241,0.20), rgba(0,122,255,0.13) 45%, rgba(244,63,94,0.08) 62%, transparent 72%);
+  top: -16%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,149,0,0.16), rgba(255,94,77,0.10) 48%, rgba(255,45,146,0.06) 64%, transparent 74%);
   animation-delay: 0s;
 }
 .liquid-orb--2 {
-  width: 840px;
+  width: 860px;
   height: 640px;
-  right: -11%;
-  top: 3%;
-  background: radial-gradient(circle at 50% 50%, rgba(236,72,153,0.16), rgba(249,115,22,0.11) 50%, transparent 72%);
-  animation-delay: -4s;
+  right: -10%;
+  top: 4%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,184,106,0.14), rgba(255,140,90,0.09) 52%, transparent 74%);
+  animation-delay: -5s;
 }
 .liquid-orb--3 {
-  width: 1020px;
+  width: 1040px;
   height: 760px;
-  left: 18%;
-  bottom: -28%;
-  background: radial-gradient(circle at 50% 50%, rgba(52,199,89,0.11), rgba(6,182,212,0.09) 55%, transparent 72%);
-  animation-delay: -9s;
+  left: 16%;
+  bottom: -26%;
+  background: radial-gradient(circle at 50% 50%, rgba(0,122,255,0.07), rgba(88,86,214,0.06) 52%, transparent 74%);
+  animation-delay: -10s;
 }
 .liquid-orb--4 {
-  width: 740px;
-  height: 740px;
-  right: 22%;
-  bottom: -6%;
-  background: radial-gradient(circle at 50% 50%, rgba(168,85,247,0.14), transparent 66%);
-  animation-delay: -12s;
+  width: 760px;
+  height: 760px;
+  right: 20%;
+  bottom: -4%;
+  background: radial-gradient(circle at 50% 50%, rgba(255,45,146,0.08), rgba(175,82,222,0.06) 50%, transparent 68%);
+  animation-delay: -13s;
 }
 @keyframes orbFloat {
   0%, 100% {
     transform: translate3d(0,0,0) scale(1);
   }
   33% {
-    transform: translate3d(18px,-12px,0) scale(1.03);
+    transform: translate3d(16px,-10px,0) scale(1.03);
   }
   66% {
-    transform: translate3d(-10px,16px,0) scale(0.98);
+    transform: translate3d(-12px,14px,0) scale(0.98);
   }
 }
 body {
   min-height: 100vh;
   background-image: none;
+  background: transparent;
 }
 a {
   color: #007aff;
