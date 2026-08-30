@@ -1,6 +1,20 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google Tag Manager -->
+    <script>
+      (function (w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", "GTM-KKHNTRCZ");
+    </script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#000000" />
@@ -21,9 +35,37 @@
         height: 100%;
         border: 0;
       }
+      #pip-button {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: sans-serif;
+        font-size: 11px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        user-select: none;
+      }
+      body:hover #pip-button {
+        opacity: 0.7;
+      }
+      #pip-button:hover {
+        opacity: 1 !important;
+        background: rgba(0, 0, 0, 0.8);
+      }
     </style>
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KKHNTRCZ" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <button id="pip-button">PiP</button>
     <div id="player-wrap"><div id="player-target"></div></div>
     <script>
       const QUEUE_STORAGE_KEY = "yt-player-queue";
@@ -101,6 +143,57 @@
           },
         });
       };
+
+      const togglePiP = async () => {
+        if (!window.documentPictureInPicture) {
+          return;
+        }
+        try {
+          const entry = queue[currentIndex];
+          if (!entry) return;
+
+          const pipWindow = await window.documentPictureInPicture.requestWindow({
+            width: 640,
+            height: 360,
+          });
+
+          player?.pauseVideo();
+
+          const styleTag = document.querySelector("style");
+          if (styleTag) {
+            const newStyle = document.createElement("style");
+            newStyle.textContent = styleTag.textContent;
+            pipWindow.document.head.append(newStyle);
+          }
+
+          const iframe = document.createElement("iframe");
+          const origin = window.location.origin;
+          // Removed autoplay=1 to see if it bypasses the configuration error
+          iframe.src = `https://www.youtube-nocookie.com/embed/${entry.id}?rel=0&modestbranding=1&playsinline=1&origin=${origin}`;
+          iframe.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;";
+          iframe.allow = "autoplay; encrypted-media; picture-in-picture";
+          iframe.referrerPolicy = "strict-origin-when-cross-origin";
+
+          pipWindow.document.body.append(iframe);
+
+          const playerWrap = document.getElementById("player-wrap");
+          playerWrap.style.display = "none";
+
+          pipWindow.onclose = () => {
+            playerWrap.style.display = "block";
+            player?.playVideo();
+          };
+        } catch (err) {
+          console.error("PiP failed:", err);
+        }
+      };
+
+      const pipBtn = document.getElementById("pip-button");
+      if (!window.documentPictureInPicture) {
+        pipBtn.style.display = "none";
+      } else {
+        pipBtn.addEventListener("click", togglePiP);
+      }
 
       const tag = document.createElement("script");
       tag.src = "https://www.youtube.com/iframe_api";
