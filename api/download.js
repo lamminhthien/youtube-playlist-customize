@@ -7,8 +7,23 @@
 //     through youtubei.js so it works without CORS and with decipher.
 //
 // The videoId must be exactly 11 characters (YouTube's typical id shape).
-import { Innertube } from "youtubei.js";
+import { Innertube, Platform } from "youtubei.js";
 import { getQueryParam } from "./_youtube.js";
+
+// youtubei.js requires a JS evaluator for signature decipher (n/sig).
+// The default `Platform.shim.eval` throws. Provide a Node-compatible shim
+// using the Function constructor as documented in ytjs.dev.
+if (typeof Platform.shim.eval === "function" && Platform.shim.eval.toString().includes("must provide")) {
+  Platform.shim.eval = async (data, env) => {
+    const props = [];
+    if (env?.n) props.push(`n: exportedVars.nFunction("${env.n}")`);
+    if (env?.sig) props.push(`sig: exportedVars.sigFunction("${env.sig}")`);
+    // Fallback generic if neither n nor sig (should not happen)
+    if (!props.length) return {};
+    const code = `${data.output}\nreturn { ${props.join(", ")} }`;
+    return new Function(code)();
+  };
+}
 
 const VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 
@@ -46,6 +61,132 @@ const sanitizeFilename = (name) =>
     .trim()
     .slice(0, 80) || "video";
 
+const DOWNLOAD_FORMAT_CANDIDATES = [
+  { type: "video+audio", quality: "best", format: "mp4" },
+  { type: "video+audio", quality: "best" },
+  { type: "video+audio", quality: "bestefficiency", format: "mp4" },
+  { type: "video+audio", quality: "bestefficiency" },
+  { type: "video", quality: "best", format: "mp4" },
+  { type: "video", quality: "best" },
+  { type: "audio", quality: "best", format: "mp4" },
+  { type: "audio", quality: "best" },
+];
+
+const getMimeContentType = (mime) => {
+  if (!mime) return "video/mp4";
+  return mime.split(";")[0].trim() || "video/mp4";
+};
+
+const getExtensionForMime = (mime) => {
+  const base = getMimeContentType(mime);
+  if (base.includes("webm")) return "webm";
+  if (base.includes("mp4")) return "mp4";
+  if (base.includes("audio")) return base.includes("webm") ? "webm" : "m4a";
+  return "mp4";
+};
+
+const tryChooseBestFormat = (info) => {
+  for (const opts of DOWNLOAD_FORMAT_CANDIDATES) {
+    try {
+      const fmt = info.chooseFormat(opts);
+      if (fmt) return { format: fmt, options: opts };
+    } catch {
+      // try next candidate
+    }
+  }
+  return null;
+};
+
+const tryDownloadWithFallback = async (info) => {
+  let lastErr;
+  for (const opts of DOWNLOAD_FORMAT_CANDIDATES) {
+    try {
+      // Quick check: does chooseFormat succeed for these opts?
+      // If not, skip download attempt to avoid unnecessary error noise.
+      try {
+        info.chooseFormat(opts);
+      } catch (chooseErr) {
+        // Only skip if it's the classic No matching formats error; otherwise still try download
+        if (/No matching formats found/i.test(chooseErr?.message || "")) {
+          lastErr = chooseErr;
+          continue;
+        }
+      }
+      const stream = await info.download(opts);
+      const format = info.chooseFormat(opts);
+      return { stream, format, options: opts };
+    } catch (e) {
+      lastErr = e;
+      if (!/No matching formats found|No valid URL to decipher|must provide your own JavaScript evaluator/i.test(e?.message || "")) {
+        // For non-format errors (e.g. UNPLAYABLE, FETCH_FAILED) don't continue silently - break
+        // but still allow fallback for FETCH_FAILED? Keep trying next candidate for robustness
+        if (/UNPLAYABLE|LOGIN_REQUIRED|Streaming data not available/i.test(e?.message || "")) throw e;
+      }
+    }
+  }
+  throw lastErr || new Error("No matching formats found");
+};
+
+const hasUsableStreamingData = (info) => {
+  const sd = info?.streaming_data;
+  if (!sd) return false;
+  const all = [...(sd.formats || []), ...(sd.adaptive_formats || [])];
+  // SABR-only responses have no url/cipher at all
+  return all.some((f) => f.url || f.cipher || f.signature_cipher);
+};
+
+const fetchInfoWithFallback = async (videoId, primaryYt) => {
+  let primaryInfo;
+  try {
+    primaryInfo = await primaryYt.getInfo(videoId);
+    if (hasUsableStreamingData(primaryInfo)) {
+      return { info: primaryInfo, yt: primaryYt };
+    }
+    console.warn(`Primary WEB client returned SABR-only data for ${videoId} (no decipherable URLs), trying fallback clients`);
+  } catch (e) {
+    // Remember error to rethrow if fallbacks also fail
+    primaryInfo = null;
+    const msg = e?.message || "";
+    const isFallbackWorthy = /No valid URL|No matching formats|must provide.*evaluator|SABR|Streaming data not available/i.test(msg) || !hasUsableStreamingData(primaryInfo);
+    if (!isFallbackWorthy) throw e;
+    console.warn(`Primary client failed for ${videoId}: ${msg} — trying fallback clients`);
+  }
+
+  // Fallback: try MWEB/IOS/Android via getBasicInfo — these are often exempt from forced SABR
+  // MWEB is prioritized because it often still has a muxed (video+audio) progressive
+  // format (itag 18 360p) that can be downloaded in a single request, avoiding
+  // the chunked 403 issues seen with high-res adaptive streams.
+  const { ClientType } = await import("youtubei.js");
+  const fallbackClients = [
+    ClientType.MWEB,
+    ClientType.IOS,
+    ClientType.ANDROID,
+    ClientType.TV,
+  ];
+  let lastErr;
+  for (const clientType of fallbackClients) {
+    try {
+      const fallbackYt = await Innertube.create({
+        ...DOWNLOAD_INNERTUBE_OPTIONS,
+        client_type: clientType,
+      });
+      // getBasicInfo avoids the broken `next` parser that causes "Cannot read properties of null (reading 'as')"
+      const info = await fallbackYt.getBasicInfo(videoId);
+      if (hasUsableStreamingData(info)) {
+        console.log(`Fallback client ${clientType} succeeded for ${videoId}`);
+        return { info, yt: fallbackYt };
+      }
+      lastErr = new Error(`Fallback ${clientType} returned no usable URLs`);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`Fallback client ${clientType} failed for ${videoId}: ${e?.message}`);
+    }
+  }
+  // If all fallbacks failed but we had a primaryInfo (even SABR-only), return it as last resort so at least metadata can be returned
+  if (primaryInfo) return { info: primaryInfo, yt: primaryYt };
+  throw lastErr || new Error("No matching formats found");
+};
+
 export default async function handler(req, res) {
   const videoId = getQueryParam(req, "id");
 
@@ -63,8 +204,8 @@ export default async function handler(req, res) {
     getQueryParam(req, "stream") !== null;
 
   try {
-    const yt = await getDownloadInnertube();
-    const info = await yt.getInfo(videoId);
+    const primaryYt = await getDownloadInnertube();
+    const { info, yt } = await fetchInfoWithFallback(videoId, primaryYt);
 
     const playability = info.playability_status?.status;
     if (playability && playability !== "OK" && playability !== "LIVE") {
@@ -82,16 +223,15 @@ export default async function handler(req, res) {
 
     if (isDownload) {
       // Stream mode: pipe the actual video bytes to the client as an attachment.
-      // Use youtubei.js download helper which handles decipher and chunked fetch.
-      const stream = await info.download({
-        type: "video+audio",
-        quality: "best",
-        format: "mp4",
-      });
+      // YouTube often has no muxed (video+audio) mp4 for many videos — only
+      // adaptive video-only / audio-only streams. Fall back gracefully.
+      const { stream, format } = await tryDownloadWithFallback(info);
 
-      const filename = `${sanitizeFilename(title)}.mp4`;
+      const mimeType = format?.mime_type || "video/mp4";
+      const ext = getExtensionForMime(mimeType);
+      const filename = `${sanitizeFilename(title)}.${ext}`;
 
-      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Type", getMimeContentType(mimeType));
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       // Allow download endpoint to be cached briefly at CDN level? No — stream is per-request.
       res.setHeader("Cache-Control", "private, no-cache");
@@ -158,9 +298,9 @@ export default async function handler(req, res) {
     let downloadUrl = "";
     let formats = [];
     try {
-      // Choose best muxed format and decipher its URL.
-      const bestFormat = info.chooseFormat({ type: "video+audio", quality: "best", format: "mp4" });
-      if (bestFormat) {
+      const chosen = tryChooseBestFormat(info);
+      if (chosen?.format) {
+        const bestFormat = chosen.format;
         // Decipher returns the full googlevideo URL.
         downloadUrl = await bestFormat.decipher(yt.session.player);
         formats = info.streaming_data?.adaptive_formats?.slice(0, 3)?.map((f) => ({
