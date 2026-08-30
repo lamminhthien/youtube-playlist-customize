@@ -24,6 +24,7 @@ const PRECACHE_URLS = [
   "./utils/renderSkeleton.js",
   "./utils/renderTabs.js",
   "./utils/renderReportIssue.js",
+  "./utils/downloadVideo.js",
   "./utils/escapeHtml.js",
 ];
 
