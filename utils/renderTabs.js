@@ -64,6 +64,14 @@ export const renderTabs = (container) => (tabs, initialIndex = 0) => {
     }
   };
 
+  const iconFor = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes("channel")) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M17 2L12 7 7 2"/></svg>`;
+    if (n.includes("custom") || n.includes("playlist")) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`;
+    if (n.includes("history")) return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>`;
+    return "";
+  };
+
   tabs.forEach((tab, index) => {
     const panel = document.createElement("div");
     panel.setAttribute("role", "tabpanel");
@@ -80,7 +88,8 @@ export const renderTabs = (container) => (tabs, initialIndex = 0) => {
     btn.setAttribute("role", "tab");
     btn.setAttribute("aria-selected", index === initialIndex ? "true" : "false");
     btn.setAttribute("tabindex", index === initialIndex ? "0" : "-1");
-    btn.textContent = tab.name;
+    const ic = iconFor(tab.name);
+    btn.innerHTML = ic ? `${ic}<span>${escapeHtml(tab.name)}</span>` : escapeHtml(tab.name);
     btn.className = [
       ...TAB_BASE,
       ...(index === initialIndex ? ACTIVE_TAB : INACTIVE_TAB),

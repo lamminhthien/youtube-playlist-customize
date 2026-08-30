@@ -20,6 +20,7 @@ const historyCardHtml = (entry, index) => {
     >
       <div class="yt-thumb-wrap">
         <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" />
+        <span class="yt-play-orb" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg></span>
         <span class="yt-play-badge">▶</span>
       </div>
       <div class="yt-video-meta">
@@ -40,14 +41,17 @@ export const renderPlayHistory = () => {
   section.innerHTML = `
     <div class="yt-playlist">
       <div class="yt-playlist-header">
-        <h2 class="yt-playlist-title">Play History</h2>
+        <div>
+          <h2 class="yt-playlist-title">Play History</h2>
+          <div class="yt-playlist-subtitle">${count ? `Your last ${count} watches — resume anytime` : "No watches yet"}</div>
+        </div>
         <span class="yt-count-badge">${count} video${count === 1 ? "" : "s"}</span>
       </div>
 
       <div class="yt-video-list">
         ${count
           ? history.map((entry, index) => historyCardHtml(entry, index)).join("")
-          : `<div class="yt-empty rounded-2xl">No watched videos yet.</div>`}
+          : `<div class="yt-empty rounded-2xl"><strong>No watched videos yet.</strong><br/>Tap any episode to start your history.</div>`}
       </div>
     </div>
   `;

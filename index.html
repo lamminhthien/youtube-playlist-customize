@@ -17,8 +17,8 @@
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fdfcff" />
+    <meta name="color-scheme" content="light" />
     <meta name="description" content="All your curated YouTube playlists in one calm, distraction-free place — now with iPadOS liquid glass design." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -52,67 +52,73 @@
     <!-- End Google Tag Manager (noscript) -->
     <div class="yt-page">
       <header class="yt-header">
-        <div class="yt-logo-row">
-          <img src="./logo.svg" alt="Playlist Hub logo" width="40" height="40" />
+        <div class="yt-header-glow" aria-hidden="true"></div>
+        <div class="yt-logo-row" id="yt-logo-row">
+          <div class="yt-logo-wrap">
+            <img src="./logo.svg" alt="Playlist Hub logo" width="40" height="40" />
+          </div>
           <div>
             <div class="yt-wordmark"><span class="yt-wordmark-accent">Play</span>listHub</div>
-            <p class="yt-tagline">All your curated playlists in one place.</p>
+            <p class="yt-tagline">All your curated playlists — <span class="yt-tagline-strong">cinematic, calm, yours.</span></p>
           </div>
         </div>
 
-        <button
-          id="clear-cache-btn"
-          title="Clear cached files and reload"
-          onclick="(async () => {
-            const btn = document.getElementById('clear-cache-btn');
-            btn.disabled = true;
-            btn.setAttribute('aria-busy', 'true');
-            const icon = btn.querySelector('.yt-btn-icon');
-            icon.classList.add('spinning');
-            try {
-              if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(regs.map(r => r.unregister()));
+        <div class="yt-header-actions">
+          <!-- Feedback button injected here by index.js -->
+          <button
+            id="clear-cache-btn"
+            title="Clear cached files and reload"
+            onclick="(async () => {
+              const btn = document.getElementById('clear-cache-btn');
+              btn.disabled = true;
+              btn.setAttribute('aria-busy', 'true');
+              const icon = btn.querySelector('.yt-btn-icon');
+              icon.classList.add('spinning');
+              try {
+                if ('serviceWorker' in navigator) {
+                  const regs = await navigator.serviceWorker.getRegistrations();
+                  await Promise.all(regs.map(r => r.unregister()));
+                }
+                if ('caches' in window) {
+                  const keys = await caches.keys();
+                  await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                window.location.reload(true);
+              } catch (e) {
+                console.error('Cache clear failed:', e);
+                btn.disabled = false;
+                btn.removeAttribute('aria-busy');
+                icon.classList.remove('spinning');
               }
-              if ('caches' in window) {
-                const keys = await caches.keys();
-                await Promise.all(keys.map(k => caches.delete(k)));
-              }
-              window.location.reload(true);
-            } catch (e) {
-              console.error('Cache clear failed:', e);
-              btn.disabled = false;
-              btn.removeAttribute('aria-busy');
-              icon.classList.remove('spinning');
-            }
-          })()"
-          class="yt-btn"
-        >
-          <svg
-            class="yt-btn-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
+            })()"
+            class="yt-btn yt-btn-ghost"
           >
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
-          Clear Cache
-        </button>
+            <svg
+              class="yt-btn-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            Clear Cache
+          </button>
+        </div>
       </header>
 
       <main id="app-container" class="yt-main" aria-live="polite"></main>
 
-      <footer class="mt-6 flex items-center justify-center gap-2 text-center text-[11px] font-medium tracking-tight text-[#86868b] dark:text-[#98989d]">
-        <span class="inline-flex h-2 w-2 rounded-full bg-[#007aff] shadow-sm"></span>
-        <span>Tailwind CSS · iPadOS 26 Liquid Glass · SF Pro</span>
-        <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 backdrop-blur-md border border-black/[0.06] dark:bg-white/10 dark:border-white/10 shadow-sm">
-          <span class="h-1.5 w-1.5 rounded-full bg-[#34c759] animate-pulse"></span>
-          Live
+      <footer class="yt-footer">
+        <span class="yt-footer-dot"></span>
+        <span>PlaylistHub · crafted for binge-watchers</span>
+        <span class="yt-footer-pill">
+          <span class="yt-footer-live"></span>
+          Live — Liquid Glass
         </span>
       </footer>
     </div>

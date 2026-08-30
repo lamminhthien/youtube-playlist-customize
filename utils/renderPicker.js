@@ -37,10 +37,22 @@ export const renderPicker = (container, entries, type, onSelect) => {
   const grid = document.createElement("div");
   grid.className = "yt-picker-grid";
 
+  const heading = document.createElement("div");
+  heading.className = "yt-picker-heading";
+  heading.innerHTML = `
+    <div style="flex:1; min-width: 200px">
+      <div class="yt-picker-heading-title">Pick a ${type === "channel" ? "channel" : "playlist"}</div>
+      <div class="yt-picker-heading-sub">${entries.length} ${type === "channel" ? "channels" : "playlists"} · tap to load episodes</div>
+    </div>
+    <div class="yt-picker-heading-badge">${type === "channel" ? "📺" : "🎞️"} Curated</div>
+  `;
+  container.appendChild(heading);
+
   entries.forEach(([name, id], index) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "yt-picker-item";
+    btn.setAttribute("aria-label", `Open ${name}`);
 
     btn.innerHTML = `
       <span class="yt-picker-avatar" style="background:${colorFor(name)}">

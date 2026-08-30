@@ -55,10 +55,13 @@ renderTabs(container)([
   { name: "Play History", load: async () => renderPlayHistory() },
 ]);
 
-const headerActions = document.querySelector(".yt-logo-row");
+const headerActions = document.querySelector(".yt-header-actions");
 if (headerActions) {
   const reportBtn = renderReportIssueButton(openReportIssueModal);
-  headerActions.appendChild(reportBtn);
+  // insert before Clear Cache so order is Feedback | Clear Cache
+  const clearBtn = document.getElementById("clear-cache-btn");
+  if (clearBtn) headerActions.insertBefore(reportBtn, clearBtn);
+  else headerActions.appendChild(reportBtn);
 }
 
 

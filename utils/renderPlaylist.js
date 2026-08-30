@@ -20,10 +20,12 @@ const videoCardHtml = (item, index, watchedVideos) => {
       target="_blank"
       rel="noopener noreferrer"
       data-video-index="${index}"
+      data-title="${safeTitle.toLowerCase()}"
       class="yt-video-row${isWatched ? " yt-watched" : ""}"
     >
       <div class="yt-thumb-wrap">
         <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" />
+        <span class="yt-play-orb" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg></span>
         <span class="yt-play-badge">▶</span>
       </div>
       <div class="yt-video-meta">
@@ -49,11 +51,16 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
   const initialItems = items.slice(0, RENDER_BATCH_SIZE);
   const watchedVideos = new Set(getWatchedVideos().map((entry) => entry.id));
 
+  const unwatchedCount = items.filter((it) => !watchedVideos.has(videoIdOf(it))).length;
+
   section.innerHTML = `
     <div class="yt-playlist">
       <div class="yt-playlist-header">
-        <h2 class="yt-playlist-title">${title}</h2>
         <div>
+          <h2 class="yt-playlist-title">${title}</h2>
+          <div class="yt-playlist-subtitle">${escapeHtml(name)} · ${count} episodes${unwatchedCount ? ` · <span style="color:#5856d6;font-weight:700">${unwatchedCount} unwatched</span>` : ""}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="yt-count-badge">${count} video${count === 1 ? "" : "s"}</span>
           ${showPlayAll ? `
           <a
@@ -62,16 +69,31 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
             rel="noopener noreferrer"
             data-play-all
             aria-label="Play all videos in this playlist on YouTube"
-            class="yt-btn"
+            class="yt-btn yt-btn-primary"
           >
-            ▶ Play all
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg>
+            Play all
           </a>` : ""}
         </div>
       </div>
 
+      ${count ? `
+      <div class="yt-toolbar">
+        <label class="yt-search-wrap" aria-label="Search videos">
+          <svg class="yt-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20L16.65 16.65"/></svg>
+          <input type="search" class="yt-search-input" placeholder="Search episodes…" autocomplete="off" data-search-input />
+        </label>
+        <div class="yt-filter-group" role="group" aria-label="Filter videos">
+          <button type="button" class="yt-filter-chip active" data-filter="all">All</button>
+          <button type="button" class="yt-filter-chip" data-filter="unwatched">Unwatched</button>
+          <button type="button" class="yt-filter-chip" data-filter="watched">Watched</button>
+        </div>
+      </div>` : ""}
+
       <div data-video-grid class="yt-video-list">
         ${initialItems.map((item, index) => videoCardHtml(item, index, watchedVideos)).join("")}
       </div>
+      ${count ? `<div data-empty-state class="hidden" style="padding: 28px; text-align:center; color:#86868b; font-size:13px; font-weight:500">No videos match your search.</div>` : ""}
     </div>
   `;
 
@@ -97,6 +119,31 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     window.open(`player.html?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
 
+  const grid = section.querySelector("[data-video-grid]");
+  const searchInput = section.querySelector("[data-search-input]");
+  const filterChips = section.querySelectorAll("[data-filter]");
+  const emptyState = section.querySelector("[data-empty-state]");
+  let activeFilter = "all";
+  let searchQuery = "";
+
+  const applyFilters = () => {
+    const cards = grid ? grid.querySelectorAll("[data-video-index]") : [];
+    let visible = 0;
+    cards.forEach((card) => {
+      const title = (card.getAttribute("data-title") || "").toLowerCase();
+      const isWatched = card.classList.contains("yt-watched");
+      const matchesSearch = !searchQuery || title.includes(searchQuery);
+      const matchesFilter =
+        activeFilter === "all" ||
+        (activeFilter === "watched" && isWatched) ||
+        (activeFilter === "unwatched" && !isWatched);
+      const show = matchesSearch && matchesFilter;
+      card.style.display = show ? "" : "none";
+      if (show) visible += 1;
+    });
+    if (emptyState) emptyState.classList.toggle("hidden", visible !== 0);
+  };
+
   const attachCardClickHandler = (anchor) => {
     anchor.addEventListener("click", (event) => {
       const index = Number(anchor.getAttribute("data-video-index"));
@@ -104,6 +151,8 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
       anchor.classList.add("yt-watched");
       markVideoWatched(items[index]);
+      // keep filter in sync — if filtering unwatched, hide card immediately
+      setTimeout(applyFilters, 30);
 
       // Let modified clicks (new tab / new window) and non-primary buttons
       // fall through to the normal link behavior.
@@ -115,7 +164,18 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     });
   };
 
-  const grid = section.querySelector("[data-video-grid]");
+  searchInput?.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    applyFilters();
+  });
+  filterChips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      activeFilter = chip.getAttribute("data-filter") || "all";
+      filterChips.forEach((c) => c.classList.toggle("active", c === chip));
+      applyFilters();
+    });
+  });
+
   grid?.querySelectorAll("[data-video-index]").forEach(attachCardClickHandler);
 
   // Lazily render remaining cards in batches as the user scrolls near the
@@ -142,6 +202,8 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
         attachCardClickHandler(card);
       });
       renderedCount += nextItems.length;
+      // apply current filter to newly added cards immediately
+      applyFilters();
 
       if (renderedCount >= items.length) {
         observer.disconnect();
