@@ -1,4 +1,4 @@
-const CACHE_NAME = "playlist-hub-v202608301412";
+const CACHE_NAME = "playlist-hub-v202608301418";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
