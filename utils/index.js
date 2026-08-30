@@ -1,6 +1,7 @@
 export { fetchPlaylist } from "./fetchPlaylist.js";
 export { fetchChannel } from "./fetchChannel.js";
 export { fetchIcon } from "./fetchIcon.js";
+export { fetchFromApi } from "./apiFetch.js";
 export { renderPlaylist } from "./renderPlaylist.js";
 export { renderPlayHistory } from "./renderPlayHistory.js";
 export { renderError } from "./renderError.js";
@@ -8,4 +9,6 @@ export { renderSkeleton } from "./renderSkeleton.js";
 export { renderTabs } from "./renderTabs.js";
 export { renderPicker } from "./renderPicker.js";
 export { escapeHtml } from "./escapeHtml.js";
-export { renderReportIssueButton, openReportIssueModal } from "./renderReportIssue.js";
+export { renderReportIssueButton, openReportIssueModal, createReportIssueModal } from "./renderReportIssue.js";
+export { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
+export { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";

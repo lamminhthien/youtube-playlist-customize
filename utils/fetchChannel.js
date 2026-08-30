@@ -1,4 +1,5 @@
 import { CHANNEL_API_URL } from "../constants/config.js";
+import { fetchFromApi } from "./apiFetch.js";
 
 /**
  * Fetch a YouTube channel's recent uploads via our own serverless endpoint
@@ -12,27 +13,6 @@ import { CHANNEL_API_URL } from "../constants/config.js";
  * @returns {Promise<{ name: string, playlistId: undefined, data: { items: Array } }>}
  */
 export const fetchChannel = async ([name, channelId]) => {
-  const params = new URLSearchParams({ id: channelId });
-  const url = `${CHANNEL_API_URL}?${params.toString()}`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    redirect: "follow",
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to load channel: ${name} (HTTP ${response.status})`
-    );
-  }
-
-  const payload = await response.json();
-
-  if (!payload || payload.status !== "success") {
-    throw new Error(
-      `Failed to load channel: ${name} (${payload?.message || "unknown error"})`
-    );
-  }
-
+  const payload = await fetchFromApi(CHANNEL_API_URL, name, "channel", channelId);
   return { name, playlistId: undefined, data: payload };
 };

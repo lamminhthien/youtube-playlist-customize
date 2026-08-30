@@ -1,7 +1,7 @@
 // Vercel serverless function: fetches just a channel avatar or playlist
 // thumbnail via youtubei.js — no video list is requested, so this stays
 // cheap enough to call for every entry shown in the picker UI.
-import { getInnertube, pickThumbnail, extractVideo, resolveChannelId } from "./_youtube.js";
+import { getInnertube, pickThumbnail, extractVideo, resolveChannelId, getQueryParam } from "./_youtube.js";
 
 const channelIcon = async (yt, idOrHandle) => {
   const channelId = await resolveChannelId(yt, idOrHandle);
@@ -27,9 +27,8 @@ const playlistIcon = async (yt, playlistId) => {
 };
 
 export default async function handler(req, res) {
-  const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-  const type = req.query?.type ?? url.searchParams.get("type");
-  const id = req.query?.id ?? url.searchParams.get("id");
+  const type = getQueryParam(req, "type");
+  const id = getQueryParam(req, "id");
 
   if (!id || (type !== "channel" && type !== "playlist")) {
     res.status(400).json({

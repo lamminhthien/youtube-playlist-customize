@@ -2,12 +2,10 @@
 // from YouTube's InnerTube API via youtubei.js — no API key, no Google Apps
 // Script proxy required. Response shape matches what utils/fetchPlaylist.js
 // and utils/renderPlaylist.js already expect.
-import { getInnertube, collectVideos, MAX_CONTINUATION_PAGES } from "./_youtube.js";
+import { getInnertube, collectVideos, MAX_CONTINUATION_PAGES, getQueryParam } from "./_youtube.js";
 
 export default async function handler(req, res) {
-  const playlistId =
-    req.query?.id ??
-    new URL(req.url, `http://${req.headers.host || "localhost"}`).searchParams.get("id");
+  const playlistId = getQueryParam(req, "id");
 
   if (!playlistId || typeof playlistId !== "string") {
     res.status(400).json({

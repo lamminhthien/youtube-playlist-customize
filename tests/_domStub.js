@@ -98,6 +98,36 @@ class Node {
   focus() {
     this._focused = true;
   }
+  click() {
+    this.dispatchEvent({ type: "click", target: this });
+  }
+  remove() {
+    if (!this.parentNode) return;
+    this.parentNode.childNodes = this.parentNode.childNodes.filter((c) => c !== this);
+    this.parentNode = null;
+  }
+  reset() {
+    // form reset: clear value of inputs/textareas/selects
+    const walk = (node) => {
+      for (const c of node.childNodes) {
+        if (c.nodeType !== 1) continue;
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(c.tagName)) {
+          c.value = "";
+          // also clear attribute value for consistency
+          if (c.attributes.value !== undefined) c.attributes.value = "";
+        }
+        walk(c);
+      }
+    };
+    walk(this);
+  }
+  get value() {
+    return this._value ?? this.getAttribute("value") ?? "";
+  }
+  set value(v) {
+    this._value = String(v);
+    this.setAttribute("value", String(v));
+  }
   querySelector(selector) {
     return this._query(selector, false);
   }
@@ -302,6 +332,23 @@ const document = {
     return new Node(tag);
   },
   body: new Node("body"),
+  _listeners: {},
+  addEventListener(type, fn) {
+    (this._listeners[type] = this._listeners[type] || []).push(fn);
+  },
+  removeEventListener(type, fn) {
+    if (!this._listeners[type]) return;
+    this._listeners[type] = this._listeners[type].filter((f) => f !== fn);
+  },
+  dispatchEvent(event) {
+    (this._listeners[event.type] || []).forEach((fn) => fn.call(this, event));
+  },
+  querySelector(selector) {
+    return this.body.querySelector(selector);
+  },
+  querySelectorAll(selector) {
+    return this.body.querySelectorAll(selector);
+  },
 };
 
 export { document, Node, KeyboardEvent };

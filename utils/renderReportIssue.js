@@ -15,6 +15,8 @@ export function renderReportIssueButton(onOpen) {
   return btn;
 }
 
+import { escapeHtml } from "./escapeHtml.js";
+
 export function createReportIssueModal(onClose) {
   const overlay = document.createElement("div");
   overlay.className = "yt-modal-overlay";
@@ -107,8 +109,20 @@ export function createReportIssueModal(onClose) {
   };
 
   const showMessage = (text, isError = false, renderHtml = false) => {
-    messageEl[renderHtml ? "innerHTML" : "textContent"] = text;
+    if (renderHtml) {
+      messageEl.innerHTML = text;
+    } else {
+      messageEl.textContent = text;
+    }
     messageEl.className = `yt-modal-message ${isError ? "yt-error" : "yt-success"}`;
+    messageEl.classList.remove("hidden");
+  };
+
+  const showSuccessWithLink = (issueUrl, issueNumber) => {
+    const safeUrl = escapeHtml(issueUrl);
+    const safeNum = escapeHtml(String(issueNumber));
+    messageEl.innerHTML = `Issue submitted successfully! <a href="${safeUrl}" target="_blank" rel="noopener">View on GitHub #${safeNum}</a>`;
+    messageEl.className = "yt-modal-message yt-success";
     messageEl.classList.remove("hidden");
   };
 
@@ -146,7 +160,7 @@ export function createReportIssueModal(onClose) {
       const data = await response.json();
 
       if (data.success) {
-        showMessage(`Issue submitted successfully! <a href="${data.issueUrl}" target="_blank" rel="noopener">View on GitHub #${data.issueNumber}</a>`, false, true);
+        showSuccessWithLink(data.issueUrl, data.issueNumber);
         form.reset();
         setTimeout(closeModal, 3000);
       } else {
@@ -168,15 +182,17 @@ export function openReportIssueModal() {
   const existingModal = document.querySelector(".yt-modal-overlay");
   if (existingModal) return;
 
-  const modal = createReportIssueModal();
+  let handleKeydown;
+  const modal = createReportIssueModal(() => {
+    if (handleKeydown) document.removeEventListener("keydown", handleKeydown);
+  });
   document.body.appendChild(modal);
   requestAnimationFrame(() => modal.classList.remove("yt-hidden"));
   modal.querySelector("#issue-title").focus();
 
-  const handleKeydown = (e) => {
+  handleKeydown = (e) => {
     if (e.key === "Escape") {
       modal.querySelector(".yt-modal-close")?.click();
-      document.removeEventListener("keydown", handleKeydown);
     }
   };
   document.addEventListener("keydown", handleKeydown);

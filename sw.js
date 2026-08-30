@@ -1,4 +1,4 @@
-const CACHE_NAME = "playlist-hub-v202608301427";
+const CACHE_NAME = "playlist-hub-v202608301456";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -8,13 +8,22 @@ const PRECACHE_URLS = [
   "./favicon.svg",
   "./manifest.webmanifest",
   "./constants/playlist.js",
+  "./constants/channels.js",
   "./constants/config.js",
   "./utils/index.js",
   "./utils/fetchPlaylist.js",
+  "./utils/fetchChannel.js",
+  "./utils/fetchIcon.js",
+  "./utils/apiFetch.js",
+  "./utils/videoHelpers.js",
+  "./utils/watchHistory.js",
   "./utils/renderPlaylist.js",
+  "./utils/renderPlayHistory.js",
+  "./utils/renderPicker.js",
   "./utils/renderError.js",
   "./utils/renderSkeleton.js",
   "./utils/renderTabs.js",
+  "./utils/renderReportIssue.js",
   "./utils/escapeHtml.js",
 ];
 

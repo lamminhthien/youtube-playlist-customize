@@ -20,6 +20,11 @@ export const getInnertube = () => {
   return innertubePromise;
 };
 
+// Test-only helper to reset the cached promise between isolated unit tests.
+export const _resetInnertubeForTest = () => {
+  innertubePromise = undefined;
+};
+
 export const textOf = (t) => t?.text ?? (typeof t === "string" ? t : "");
 
 export const pickThumbnail = (thumbnails) => {
@@ -74,7 +79,12 @@ export const collectVideos = (feed, items) => {
 
 export const MAX_CONTINUATION_PAGES = 20;
 
-const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
+export const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
+
+// Unified query-param helper: Vercel populates req.query but tests/local
+// dev may only provide req.url, so fall back to URL parsing.
+export const getQueryParam = (req, key) =>
+  req.query?.[key] ?? new URL(req.url, `http://${req.headers.host || "localhost"}`).searchParams.get(key);
 
 // Percent-encodes the handle name but keeps a leading "@" literal, since
 // InnerTube's resolve_url endpoint only recognizes an unescaped "@".

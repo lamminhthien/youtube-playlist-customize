@@ -2,7 +2,10 @@
 // using a Personal Access Token (PAT) stored in environment variables.
 import { Octokit } from "@octokit/rest";
 
-const octokit = new Octokit({ auth: process.env.GITHUB_PAT });
+let octokitFactory = () => new Octokit({ auth: process.env.GITHUB_PAT });
+export const getOctokit = () => octokitFactory();
+export const _setOctokitFactoryForTest = (fn) => { octokitFactory = fn; };
+export const _resetOctokitFactory = () => { octokitFactory = () => new Octokit({ auth: process.env.GITHUB_PAT }); };
 
 const ALLOWED_TYPES = ["bug", "feature", "improvement", "feedback"];
 
@@ -44,6 +47,7 @@ ${description.trim()}
 
     const labels = [issueType, "user-reported"];
 
+    const octokit = getOctokit();
     const response = await octokit.rest.issues.create({
       owner,
       repo,

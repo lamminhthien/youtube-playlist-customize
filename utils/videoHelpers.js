@@ -10,11 +10,11 @@ export const formatDate = (input) => {
 };
 
 export const videoIdFromUrl = (url) => {
-  if (!url) return "";
+  if (!url || typeof url !== "string") return "";
   try {
     const u = new URL(url);
     if (u.hostname.includes("youtu.be")) {
-      return u.pathname.slice(1);
+      return u.pathname.slice(1).split("/")[0].split("?")[0] || "";
     }
     return u.searchParams.get("v") || "";
   } catch {
