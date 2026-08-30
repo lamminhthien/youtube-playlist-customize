@@ -272,7 +272,7 @@ function parseHTML(html, parent) {
         attrs[am[1]] = am[2] === undefined ? "" : am[2];
       }
       pushElement(tag, attrs);
-      if (selfClose || VOID_TAGS.has(tag.toLowerCase())) {
+      if (selfClose && !VOID_TAGS.has(tag.toLowerCase())) {
         if (stack.length > 1) stack.length -= 1;
       }
     } else {

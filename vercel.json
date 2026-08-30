@@ -1,6 +1,6 @@
 {
   "regions": ["sin1"],
-  "buildCommand": "node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs",
+  "buildCommand": "npm run build:css && node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs",
   "outputDirectory": ".",
   "installCommand": "npm install"
 }

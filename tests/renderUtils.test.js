@@ -109,11 +109,16 @@ import { renderPlayHistory } from "../utils/renderPlayHistory.js";
 
 describe("renderPlayHistory", () => {
   let originalOpen;
+  let lastOpenedUrl;
 
   beforeEach(() => {
     globalThis.window = globalThis.window || {};
     originalOpen = globalThis.window.open;
-    globalThis.window.open = (url) => url;
+    lastOpenedUrl = null;
+    globalThis.window.open = (url) => {
+      lastOpenedUrl = url;
+      return url;
+    };
     localStorage.clear();
   });
 
@@ -136,7 +141,6 @@ describe("renderPlayHistory", () => {
 
     const section = renderPlayHistory();
     const rows = section.querySelectorAll(".yt-video-row");
-    console.log("Rows HTML:", [...rows].map(r => r.innerHTML));
     assert.equal(rows.length, 2);
 
     // v2 should be first because of .reverse()
@@ -157,8 +161,8 @@ describe("renderPlayHistory", () => {
     // Click the first row (which is v2)
     rows[0].dispatchEvent(new Event("click"));
 
-    const openUrl = globalThis.window.open();
-    assert.ok(openUrl.includes("v=v2"));
+    const openUrl = lastOpenedUrl;
+    assert.ok(openUrl && openUrl.includes("v=v2"));
     assert.ok(openUrl.includes("i=0"));
     assert.ok(openUrl.includes("title=Second"));
   });
