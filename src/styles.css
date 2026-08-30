@@ -793,4 +793,85 @@ a:hover { text-decoration: none; }
   -webkit-overflow-scrolling: touch;
 }
 
+/* ============ Performance — Tablet / coarse pointer (issue #7 follow-up) ============ */
+/* Samsung Galaxy Tab A9+ is 1920×1200 (1200px portrait width) and reports
+   pointer:coarse + hover:none. Previous mobile-only guards (<640px / <768px)
+   did NOT apply on this tablet, so its weak GPU still paid for:
+     - 4 × blur(68px) animated orbs
+     - backdrop-filter(16-28px) on header + main + every card + picker
+     - fadein + hover transform per card (hundreds of concurrent animations)
+   iPhone 11 (390px) DID match the mobile guards and felt smooth, which
+   explains the reported divergence.
+
+   These rules target touch devices regardless of width, and also widen the
+   breakpoint to 1024px so iPad/Android tablets in portrait still benefit
+   even if the browser reports a fine pointer. */
+@media (max-width: 1024px) {
+  .liquid-orb { animation: none !important; will-change: auto !important; }
+  .yt-video-row-wrap,
+  .yt-video-row { animation: none !important; }
+  /* Per-card blur is the costliest on grids (2-3 cols = many simultaneous
+     backdrop filters). Replace with solid bg; parent .yt-playlist still
+     provides the glass look. */
+  .yt-video-row-wrap {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #fff !important;
+  }
+  .yt-main {
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  }
+  .yt-header {
+    backdrop-filter: blur(14px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+  }
+  /* Picker cards also have blur(18px) each — same treatment */
+  .yt-picker-item {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #fff !important;
+  }
+  /* Tab bar blur on a full-width pill is also expensive while scrolling */
+  .yt-tabbar { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(0,0,0,0.06) !important; }
+}
+/* Pointer-coarse is the most reliable signal for "touch Android tablet/phone"
+   regardless of viewport width or UA. Covers Tab A9+ in both orientations
+   and any future Android device where width >1024. */
+@media (pointer: coarse) {
+  .liquid-orb { display: none !important; }
+  .liquid-bg { filter: none !important; }
+  .liquid-bg::before { opacity: 0.85 !important; }
+  .liquid-bg::after { display: none !important; }
+  .yt-video-row-wrap,
+  .yt-picker-item,
+  .yt-tabbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .yt-video-row-wrap { background: #fff !important; }
+  .yt-picker-item { background: #fff !important; }
+  /* Disable hover lift/scale — no hover on touch, saves compositor work */
+  .yt-video-row-wrap:hover,
+  .yt-video-row:hover { transform: none !important; box-shadow: none !important; }
+  .yt-video-row-wrap:hover { background: #fff !important; }
+  .yt-picker-item:hover { transform: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important; }
+  .yt-video-row:hover .yt-thumb-wrap img { transform: none !important; }
+  .yt-video-row:hover .yt-thumb-wrap::after { opacity: 0 !important; }
+  .yt-play-orb { display: none !important; }
+  /* Reduce motion for users who haven't set prefers-reduced-motion but are
+     on a coarse pointer with weak GPU */
+  .yt-video-row-wrap,
+  .yt-video-row { animation: none !important; transition: background 0.15s, opacity 0.15s !important; }
+  /* Extra containment for picker grid on touch */
+  .yt-picker-grid { contain: layout style; }
+  .yt-picker-item { contain: layout paint style; content-visibility: auto; contain-intrinsic-size: auto 140px; }
+}
+/* JS fallback hook: <html class="is-coarse"> added when matchMedia('(pointer:coarse)')
+   or Android UA detected — covers Chrome versions that don't expose pointer:coarse reliably */
+.is-coarse .liquid-orb { display: none !important; }
+.is-coarse .liquid-bg { filter: none !important; }
+.is-coarse .yt-video-row-wrap,
+.is-coarse .yt-picker-item { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: #fff !important; }
+
 /* --- Light-only — dark mode removed per request --- */

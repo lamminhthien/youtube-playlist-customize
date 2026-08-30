@@ -6,10 +6,7 @@
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
-    --color-black: #000;
     --spacing: 0.25rem;
-    --text-xs: 0.75rem;
-    --text-xs--line-height: calc(1 / 0.75);
     --text-sm: 0.875rem;
     --text-sm--line-height: calc(1.25 / 0.875);
     --font-weight-medium: 500;
@@ -1699,6 +1696,111 @@ a:hover {
 .yt-video-list {
   contain: layout style;
   -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 1024px) {
+  .liquid-orb {
+    animation: none !important;
+    will-change: auto !important;
+  }
+  .yt-video-row-wrap,
+  .yt-video-row {
+    animation: none !important;
+  }
+  .yt-video-row-wrap {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #fff !important;
+  }
+  .yt-main {
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+  }
+  .yt-header {
+    backdrop-filter: blur(14px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+  }
+  .yt-picker-item {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #fff !important;
+  }
+  .yt-tabbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0,0,0,0.06) !important;
+  }
+}
+@media (pointer: coarse) {
+  .liquid-orb {
+    display: none !important;
+  }
+  .liquid-bg {
+    filter: none !important;
+  }
+  .liquid-bg::before {
+    opacity: 0.85 !important;
+  }
+  .liquid-bg::after {
+    display: none !important;
+  }
+  .yt-video-row-wrap,
+  .yt-picker-item,
+  .yt-tabbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .yt-video-row-wrap {
+    background: #fff !important;
+  }
+  .yt-picker-item {
+    background: #fff !important;
+  }
+  .yt-video-row-wrap:hover,
+  .yt-video-row:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .yt-video-row-wrap:hover {
+    background: #fff !important;
+  }
+  .yt-picker-item:hover {
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06) !important;
+  }
+  .yt-video-row:hover .yt-thumb-wrap img {
+    transform: none !important;
+  }
+  .yt-video-row:hover .yt-thumb-wrap::after {
+    opacity: 0 !important;
+  }
+  .yt-play-orb {
+    display: none !important;
+  }
+  .yt-video-row-wrap,
+  .yt-video-row {
+    animation: none !important;
+    transition: background 0.15s, opacity 0.15s !important;
+  }
+  .yt-picker-grid {
+    contain: layout style;
+  }
+  .yt-picker-item {
+    contain: layout paint style;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 140px;
+  }
+}
+.is-coarse .liquid-orb {
+  display: none !important;
+}
+.is-coarse .liquid-bg {
+  filter: none !important;
+}
+.is-coarse .yt-video-row-wrap,
+.is-coarse .yt-picker-item {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: #fff !important;
 }
 @property --tw-border-style {
   syntax: "*";

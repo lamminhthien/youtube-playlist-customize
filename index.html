@@ -28,6 +28,31 @@
     <link rel="apple-touch-icon" href="./logo.svg" />
     <title>Playlist Hub · LMT</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // Early coarse-pointer / Android hook so CSS can disable expensive glass
+      // before first paint. Covers Tab A9+ (pointer:coarse) and Chrome variants
+      // where pointer media query is flaky.
+      (function () {
+        try {
+          var isCoarse = false;
+          if (window.matchMedia) {
+            isCoarse = window.matchMedia("(pointer: coarse)").matches || window.matchMedia("(hover: none)").matches;
+          }
+          var ua = navigator.userAgent || "";
+          var isAndroid = /Android/i.test(ua);
+          // Also treat low-memory / low-core devices as coarse to preserve battery/GPU
+          var lowMem = navigator.deviceMemory && navigator.deviceMemory <= 4;
+          var lowCpu = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+          if (isCoarse || isAndroid || lowMem || lowCpu) {
+            document.documentElement.classList.add("is-coarse");
+          }
+          // Allow manual opt-out via ?glass=1
+          if (new URLSearchParams(location.search).has("glass")) {
+            document.documentElement.classList.remove("is-coarse");
+          }
+        } catch {}
+      })();
+    </script>
     <script type="module" src="./index.js"></script>
     <script>
       if ("serviceWorker" in navigator) {
