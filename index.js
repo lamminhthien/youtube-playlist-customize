@@ -11,6 +11,7 @@ import {
   renderPicker,
   renderReportIssueButton,
   openReportIssueModal,
+  initScrollToTop,
 } from "./utils/index.js";
 
 // Each entry tab gets:
@@ -63,5 +64,7 @@ if (headerActions) {
   if (clearBtn) headerActions.insertBefore(reportBtn, clearBtn);
   else headerActions.appendChild(reportBtn);
 }
+
+initScrollToTop(document.getElementById("scroll-to-top"));
 
 

@@ -1802,6 +1802,87 @@ a:hover {
   -webkit-backdrop-filter: none !important;
   background: #fff !important;
 }
+.yt-scroll-top {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.84);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255,255,255,0.62);
+  border-top-color: rgba(255,255,255,0.92);
+  border-radius: 999px;
+  color: #1d1d1f;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.14),
+    0 2px 8px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.95);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px) scale(0.92);
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16,1,0.3,1),
+    transform 0.36s cubic-bezier(0.16,1,0.3,1),
+    visibility 0.28s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.yt-scroll-top svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.yt-scroll-top:hover {
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.16),
+    0 4px 12px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,1);
+  transform: translateY(-1px) scale(1);
+}
+.yt-scroll-top:active {
+  transform: scale(0.94);
+}
+.yt-scroll-top.yt-scroll-top--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+@media (min-width: 1160px) {
+  .yt-scroll-top {
+    right: 24px;
+    bottom: 24px;
+    width: 48px;
+    height: 48px;
+  }
+}
+@media (max-width: 639px) {
+  .yt-scroll-top {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yt-scroll-top {
+    transition: opacity 0.15s;
+    transform: none !important;
+  }
+  .yt-scroll-top.yt-scroll-top--visible {
+    transform: none !important;
+  }
+}
+@media (pointer: coarse) {
+  .yt-scroll-top:hover {
+    transform: none !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95) !important;
+  }
+}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
