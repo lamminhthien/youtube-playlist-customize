@@ -9,6 +9,8 @@ import {
   renderTabs,
   renderSkeleton,
   renderPicker,
+  renderReportIssueButton,
+  openReportIssueModal,
 } from "./utils/index.js";
 
 // Each entry tab gets:
@@ -52,5 +54,11 @@ renderTabs(container)([
   buildSection("Custom Playlist", Object.entries(PLAY_LIST_ID), fetchPlaylist, "playlist"),
   { name: "Play History", load: async () => renderPlayHistory() },
 ]);
+
+const headerActions = document.querySelector(".yt-logo-row");
+if (headerActions) {
+  const reportBtn = renderReportIssueButton(openReportIssueModal);
+  headerActions.appendChild(reportBtn);
+}
 
 

@@ -8,3 +8,4 @@ export { renderSkeleton } from "./renderSkeleton.js";
 export { renderTabs } from "./renderTabs.js";
 export { renderPicker } from "./renderPicker.js";
 export { escapeHtml } from "./escapeHtml.js";
+export { renderReportIssueButton, openReportIssueModal } from "./renderReportIssue.js";

@@ -406,3 +406,209 @@ a:hover {
   border: 1px solid #e0e0e0;
   background: #fafafa;
 }
+
+/* ---------- modal (report issue) ---------- */
+
+.yt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  opacity: 1;
+  transition: opacity 0.15s ease-out;
+}
+.yt-modal-overlay.yt-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.yt-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: scale(0.95);
+  transition: transform 0.15s ease-out;
+}
+.yt-modal-overlay:not(.yt-hidden) .yt-modal {
+  transform: scale(1);
+}
+
+.yt-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+.yt-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.yt-modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 22px;
+  line-height: 1;
+  color: #666;
+  cursor: pointer;
+}
+.yt-modal-close:hover {
+  background: #f0f0f0;
+  color: #1a1a1a;
+}
+
+.yt-modal-form {
+  padding: 20px;
+}
+
+.yt-modal-body {
+  margin-bottom: 20px;
+}
+
+.yt-form-group {
+  margin-bottom: 16px;
+}
+.yt-form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+.yt-required {
+  color: #cc0000;
+}
+.yt-form-input,
+.yt-form-select,
+.yt-form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a1a;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.yt-form-input:focus,
+.yt-form-select:focus,
+.yt-form-textarea:focus {
+  outline: none;
+  border-color: #15c;
+  box-shadow: 0 0 0 3px rgba(21, 85, 204, 0.15);
+}
+.yt-form-input::placeholder,
+.yt-form-textarea::placeholder {
+  color: #999;
+}
+.yt-form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.yt-form-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #767676;
+}
+
+.yt-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.yt-btn-primary {
+  background: linear-gradient(#cc0000, #a00);
+  border-color: #800;
+  color: #fff;
+}
+.yt-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(#e00, #b00);
+}
+.yt-btn-primary:active:not(:disabled) {
+  background: #900;
+}
+.yt-btn-secondary {
+  background: linear-gradient(#f8f8f8, #e2e2e2);
+  border-color: #999;
+  color: #333;
+}
+.yt-btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(#fff, #eee);
+}
+
+.yt-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.yt-spinner {
+  width: 16px;
+  height: 16px;
+  animation: yt-spin 0.8s linear infinite;
+}
+.yt-spinner-path {
+  stroke: currentColor;
+  stroke-dasharray: 60, 150;
+  stroke-dashoffset: 0;
+  animation: yt-spinner-dash 1.5s ease-in-out infinite;
+}
+@keyframes yt-spinner-dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
+
+.yt-modal-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.yt-modal-message.yt-success {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #2e7d32;
+}
+.yt-modal-message.yt-error {
+  background: #fdeaea;
+  border: 1px solid #ef9a9a;
+  color: #c62828;
+}
+.yt-modal-message a {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.hidden {
+  display: none !important;
+}
