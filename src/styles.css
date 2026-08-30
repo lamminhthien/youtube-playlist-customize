@@ -729,4 +729,68 @@ a:hover { text-decoration: none; }
   .yt-download-btn { padding: 9px 10px; border-radius: 12px; }
 }
 
+/* ============ Performance — Android scroll (issue #7) ============ */
+/* Off-screen cards skip layout/paint. contain-intrinsic-size reserves
+   space so scrollbar doesn't jump. This is the biggest win for large
+   channels (>100 videos) on Android Chrome where backdrop-filter + many
+   DOM nodes jank without it. */
+.yt-video-row-wrap {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
+  contain: layout paint style;
+}
+/* Desktop cards are taller (16:9 thumb + meta) */
+@media (min-width: 640px) {
+  .yt-video-row-wrap { contain-intrinsic-size: auto 280px; }
+}
+/* Skeleton also benefits — avoids painting off-screen shimmer */
+.yt-skeleton-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+  contain: layout paint style;
+}
+/* Reduce expensive backdrop-filter per card. On mobile the list is a
+   single column with border-bottom; solid bg is faster and still looks
+   glass because the parent .yt-playlist already has blur. */
+@media (max-width: 639px) {
+  .yt-video-row-wrap {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(255,255,255,0.96) !important;
+  }
+}
+/* Also reduce blur on the main container + header on Android to save GPU.
+   Keep visual hierarchy with solid-ish fallback. */
+@media (max-width: 639px) {
+  .yt-main {
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+  }
+  .yt-header {
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+  }
+}
+/* Liquid orbs are purely decorative and use blur(68px) + animation.
+   On low-end/Android they burn GPU and cause scroll jank. Disable
+   animation on small screens and when user prefers reduced motion. */
+@media (max-width: 768px) {
+  .liquid-orb { animation: none !important; will-change: auto !important; }
+  /* Each card animates fadein — 500 simultaneous animations jank on Android.
+     Disable per-card animation on mobile; section .animate-fadein still gives
+     a single entrance effect. */
+  .yt-video-row-wrap { animation: none !important; }
+  .yt-video-row { animation: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .liquid-orb { animation: none !important; will-change: auto !important; }
+  .yt-video-row-wrap, .yt-video-row { animation: none !important; transition: none !important; }
+}
+/* Grid container should not create extra stacking contexts during scroll */
+.yt-video-list {
+  contain: layout style;
+  /* Improves scroll perf: tell browser this element will scroll */
+  -webkit-overflow-scrolling: touch;
+}
+
 /* --- Light-only — dark mode removed per request --- */

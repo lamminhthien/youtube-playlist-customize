@@ -19,6 +19,8 @@ const videoCardHtml = (item, index, watchedVideos) => {
   const downloadLabel = `Download ${safeTitle}`;
   // Download button is outside the anchor to avoid nested interactive elements;
   // the whole row wraps in a container so we can position the button at the end.
+  // Images use decoding="async" + loading="lazy" to avoid blocking main thread
+  // and to let the browser defer off-screen decodes (critical on Android).
   return `
     <div class="yt-video-row-wrap${isWatched ? " yt-watched" : ""}" data-video-index="${index}" data-title="${safeTitle.toLowerCase()}">
       <a
@@ -29,7 +31,7 @@ const videoCardHtml = (item, index, watchedVideos) => {
         class="yt-video-row yt-video-row--link"
       >
         <div class="yt-thumb-wrap">
-          <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" />
+          <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" decoding="async" width="480" height="270" />
           <span class="yt-play-orb" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg></span>
           <span class="yt-play-badge">▶</span>
         </div>
@@ -162,6 +164,22 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     if (emptyState) emptyState.classList.toggle("hidden", visible !== 0);
   };
 
+  // Debounce filter updates via rAF so typing/search doesn't thrash layout
+  // when hundreds of cards are present (Android jank).
+  let filterRaf = null;
+  const scheduleApplyFilters = () => {
+    if (filterRaf !== null) return;
+    const cb = () => {
+      filterRaf = null;
+      applyFilters();
+    };
+    if (typeof requestAnimationFrame !== "undefined") {
+      filterRaf = requestAnimationFrame(cb);
+    } else {
+      cb();
+    }
+  };
+
   const attachCardClickHandler = (wrap) => {
     const link = wrap.querySelector("[data-video-link]");
     const downloadBtn = wrap.querySelector("[data-download]");
@@ -203,7 +221,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
       wrap.classList.add("yt-watched");
       markVideoWatched(items[index]);
       // keep filter in sync — if filtering unwatched, hide card immediately
-      setTimeout(applyFilters, 30);
+      setTimeout(scheduleApplyFilters, 30);
 
       // Let modified clicks (new tab / new window) and non-primary buttons
       // fall through to the normal link behavior.
@@ -217,13 +235,13 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   searchInput?.addEventListener("input", (e) => {
     searchQuery = e.target.value.trim().toLowerCase();
-    applyFilters();
+    scheduleApplyFilters();
   });
   filterChips.forEach((chip) => {
     chip.addEventListener("click", () => {
       activeFilter = chip.getAttribute("data-filter") || "all";
       filterChips.forEach((c) => c.classList.toggle("active", c === chip));
-      applyFilters();
+      scheduleApplyFilters();
     });
   });
 
@@ -231,37 +249,100 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   // Lazily render remaining cards in batches as the user scrolls near the
   // bottom, instead of building hundreds of DOM nodes for large channels
-  // and playlists up front.
+  // and playlists up front. Uses a rAF-batched observer with a large rootMargin
+  // so the next batch is ready *before* the user reaches the bottom (pre-load
+  // viewport) and avoids long tasks that jank scroll on Android.
   let renderedCount = initialItems.length;
-  if (grid && renderedCount < items.length && typeof IntersectionObserver !== "undefined") {
-    const sentinel = document.createElement("div");
-    sentinel.style.height = "1px";
-    grid.appendChild(sentinel);
+  if (grid && renderedCount < items.length) {
+    const hasIO = typeof IntersectionObserver !== "undefined";
+    if (hasIO) {
+      const sentinel = document.createElement("div");
+      sentinel.setAttribute("data-sentinel", "");
+      sentinel.style.height = "1px";
+      sentinel.style.width = "100%";
+      // content-visibility can't apply to sentinel; keep it tiny but observable
+      sentinel.style.contain = "strict";
+      grid.appendChild(sentinel);
 
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
+      let ticking = false;
+      const scheduleBatch = () => {
+        if (ticking) return;
+        ticking = true;
+        const run = () => {
+          ticking = false;
+          const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
+          if (!nextItems.length) {
+            observer.disconnect();
+            sentinel.remove();
+            return;
+          }
+          // Use a DocumentFragment-equivalent via temp container to batch DOM insert
+          const temp = document.createElement("div");
+          temp.innerHTML = nextItems
+            .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
+            .join("");
+          const cards = [...temp.children];
+          cards.forEach((card) => {
+            grid.insertBefore(card, sentinel);
+            attachCardClickHandler(card);
+          });
+          renderedCount += nextItems.length;
+          scheduleApplyFilters();
 
-      const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
-      if (!nextItems.length) return;
+          if (renderedCount >= items.length) {
+            observer.disconnect();
+            sentinel.remove();
+          }
+        };
+        // Prefer idle callback for non-urgent batch work, fallback to rAF
+        if (typeof requestIdleCallback !== "undefined") {
+          requestIdleCallback(run, { timeout: 200 });
+        } else if (typeof requestAnimationFrame !== "undefined") {
+          requestAnimationFrame(run);
+        } else {
+          run();
+        }
+      };
 
-      const temp = document.createElement("div");
-      temp.innerHTML = nextItems
-        .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
-        .join("");
-      [...temp.children].forEach((card) => {
-        grid.insertBefore(card, sentinel);
-        attachCardClickHandler(card);
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        scheduleBatch();
+      }, {
+        // Pre-load next batch 600px before sentinel enters viewport
+        rootMargin: "600px 0px",
+        threshold: 0,
       });
-      renderedCount += nextItems.length;
-      // apply current filter to newly added cards immediately
-      applyFilters();
-
-      if (renderedCount >= items.length) {
-        observer.disconnect();
-        sentinel.remove();
+      observer.observe(sentinel);
+    } else {
+      // Fallback for environments without IntersectionObserver (e.g. old WebView):
+      // render remaining items in idle chunks so we don't block first paint.
+      const renderChunkIdle = () => {
+        if (renderedCount >= items.length) return;
+        const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
+        const temp = document.createElement("div");
+        temp.innerHTML = nextItems
+          .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
+          .join("");
+        [...temp.children].forEach((card) => {
+          grid.appendChild(card);
+          attachCardClickHandler(card);
+        });
+        renderedCount += nextItems.length;
+        scheduleApplyFilters();
+        if (renderedCount < items.length) {
+          if (typeof requestIdleCallback !== "undefined") {
+            requestIdleCallback(renderChunkIdle, { timeout: 300 });
+          } else {
+            setTimeout(renderChunkIdle, 32);
+          }
+        }
+      };
+      if (typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(renderChunkIdle, { timeout: 300 });
+      } else {
+        setTimeout(renderChunkIdle, 32);
       }
-    });
-    observer.observe(sentinel);
+    }
   }
 
   return section;
