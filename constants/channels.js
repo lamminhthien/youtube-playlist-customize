@@ -5,6 +5,5 @@ export const CHANNEL_ID = {
   // Handle @DauPhongTV doesn't resolve via InnerTube's resolve_url; use the channel id instead.
   "Đậu Phộng TV": "UC6Q8f2fK10PLMo4kkiBSCXA",
   "Học Viện Bò Và Gấu": "@HocvienBovaGau",
-  // Handle @MuseViệtNam doesn't resolve via InnerTube's resolve_url; use the channel id instead.
-  "Muse VN": "UCott96qGP5ADmsB_yNQMvDA",
+  "Dieison Games": "UCQ-_vceha5CNvQtcqopT_1g"
 };
