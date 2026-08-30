@@ -9,9 +9,9 @@
     "test": "node --test tests/*.test.js",
     "bump-cache": "node scripts/bump-cache-version.mjs",
     "verify-channels": "node scripts/verify-channels.mjs",
-    "predeploy": "npm run build:css && node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs",
+    "predeploy": "npm test && npm run build:css && node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs",
     "deploy": "wrangler deploy",
-    "deploy:vercel": "node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs && vercel --prod",
+    "deploy:vercel": "npm test && node scripts/verify-channels.mjs && node scripts/bump-cache-version.mjs && vercel --prod",
     "preview": "wrangler dev",
     "build:css": "./node_modules/.bin/postcss src/styles.css -o styles.css",
     "watch:css": "./node_modules/.bin/postcss src/styles.css -o styles.css --watch"
