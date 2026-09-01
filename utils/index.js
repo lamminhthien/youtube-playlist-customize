@@ -17,3 +17,4 @@ export { initScrollToTop } from "./scrollToTop.js";
 export { renderChatbot } from "./renderChatbot.js";
 export { getCachedVideos, saveVideosToCache, searchCachedVideos, VIDEO_CACHE_KEY } from "./videoCache.js";
 export { getOllamaSettings, saveOllamaSettings, callChatApi, answerQuery, buildVideoContext } from "./chatProvider.js";
+export { fetchDownloadInfo, buildDownloadUrl, downloadFormat, extractVideoId, videoIdFromItem } from "./download.js";

@@ -2266,6 +2266,299 @@ a:hover {
   width: 100%;
   pointer-events: none;
 }
+.yt-download-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 999px;
+  color: #1d1d1f;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06);
+  backdrop-filter: blur(10px);
+  transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
+  z-index: 2;
+  flex-shrink: 0;
+}
+.yt-download-btn:hover {
+  background: #1d1d1f;
+  color: #fff;
+  border-color: #1d1d1f;
+  transform: scale(1.07);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+}
+.yt-download-btn:active {
+  transform: scale(0.95);
+}
+.yt-download-btn svg {
+  width: 14px;
+  height: 14px;
+}
+@media (min-width: 640px) {
+  .yt-download-btn {
+    top: 10px;
+    right: 10px;
+  }
+}
+.yt-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.yt-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.07);
+  background: rgba(255,255,255,0.94);
+  color: #636366;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.yt-card-action:hover {
+  background: #1d1d1f;
+  border-color: #1d1d1f;
+  color: #fff;
+  transform: translateY(-1px);
+}
+.yt-card-action--primary {
+  background: linear-gradient(135deg, #007aff, #5856d6);
+  border-color: transparent;
+  color: #fff;
+}
+.yt-card-action--primary:hover {
+  background: linear-gradient(135deg, #0a84ff, #6366f1);
+}
+.yt-dl-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.36);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+.yt-dl-overlay.yt-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.yt-dl-modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: min(86vh, 720px);
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 22px;
+  box-shadow: 0 24px 56px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(1) translateY(0);
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.yt-dl-overlay.yt-hidden .yt-dl-modal {
+  transform: scale(0.96) translateY(8px);
+}
+.yt-dl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.62);
+  flex-shrink: 0;
+}
+.yt-dl-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #111113;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.yt-dl-subtitle {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #86868b;
+  margin-top: 2px;
+  word-break: break-all;
+}
+.yt-dl-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.06);
+  border: none;
+  border-radius: 999px;
+  font-size: 18px;
+  color: #636366;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+.yt-dl-close:hover {
+  background: rgba(0,0,0,0.10);
+  color: #1d1d1f;
+}
+.yt-dl-body {
+  padding: 14px 20px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+}
+.yt-dl-section {
+  margin-bottom: 16px;
+}
+.yt-dl-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #86868b;
+  margin: 0 0 8px;
+}
+.yt-dl-format {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.yt-dl-format:hover {
+  border-color: rgba(99,102,241,0.22);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+.yt-dl-format-meta {
+  min-width: 0;
+  flex: 1;
+}
+.yt-dl-format-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d1d1f;
+  letter-spacing: -0.2px;
+}
+.yt-dl-format-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #86868b;
+  margin-top: 1px;
+  word-break: break-all;
+}
+.yt-dl-format-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.yt-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.yt-dl-btn:hover {
+  background: #1d1d1f;
+  color: #fff;
+  border-color: #1d1d1f;
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.yt-dl-btn--primary {
+  background: linear-gradient(135deg, #007aff, #5856d6);
+  border-color: transparent;
+  color: #fff;
+}
+.yt-dl-btn--primary:hover {
+  background: linear-gradient(135deg, #0a84ff, #6366f1);
+}
+.yt-dl-empty {
+  padding: 18px;
+  text-align: center;
+  color: #86868b;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.yt-dl-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px;
+  color: #636366;
+  font-size: 13px;
+  font-weight: 600;
+}
+.yt-dl-error {
+  padding: 14px;
+  background: rgba(255,59,48,0.08);
+  border: 1px solid rgba(255,59,48,0.12);
+  border-radius: 12px;
+  color: #d70015;
+  font-size: 13px;
+  font-weight: 500;
+}
+.yt-dl-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.yt-dl-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 999px;
+  outline: none;
+  background: #fff;
+}
+.yt-dl-input:focus {
+  border-color: rgba(99,102,241,0.32);
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;

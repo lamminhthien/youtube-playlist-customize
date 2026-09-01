@@ -1,6 +1,18 @@
 // Shared InnerTube helpers for the api/ serverless functions. Prefixed with
 // an underscore so Vercel does not expose this file as its own route.
-import { Innertube } from "youtubei.js";
+import { Innertube, Platform } from "youtubei.js";
+
+// youtubei.js v18+ requires a JS evaluator for deciphering n-signature /
+// ciphered stream URLs. Without it, streaming_data URLs stay empty
+// (see https://ytjs.dev/guide/getting-started.html#providing-a-custom-javascript-interpreter).
+// Node's platform exposes it as Platform.eval (web uses Platform.shim.eval).
+const _needsEval = (fn) => typeof fn === "function" && fn.toString().includes("must provide your own");
+if (_needsEval(Platform.eval) || _needsEval(Platform.shim?.eval)) {
+  const evaluator = async (data) => new Function(data.output)();
+  // @ts-ignore — patch both shapes for compat across runtimes
+  Platform.eval = evaluator;
+  if (Platform.shim) Platform.shim.eval = evaluator;
+}
 
 // Reused across warm invocations of the same serverless instance so we don't
 // re-negotiate an InnerTube session on every request.
@@ -20,9 +32,27 @@ export const getInnertube = () => {
   return innertubePromise;
 };
 
+// Separate session that fetches the player JS — required for deciphering
+// streaming URLs in api/download.js (getInfo/streaming_data). The main
+// playlist/channel session skips the player to save ~200KB/300ms per cold
+// start, but download needs it or else playability_status=UNPLAYABLE.
+let downloadInnertubePromise;
+export const INNERTUBE_DOWNLOAD_OPTIONS = {
+  ...INNERTUBE_SESSION_OPTIONS,
+  retrieve_player: true,
+};
+
+export const getInnertubeForDownload = () => {
+  if (!downloadInnertubePromise) {
+    downloadInnertubePromise = Innertube.create(INNERTUBE_DOWNLOAD_OPTIONS);
+  }
+  return downloadInnertubePromise;
+};
+
 // Test-only helper to reset the cached promise between isolated unit tests.
 export const _resetInnertubeForTest = () => {
   innertubePromise = undefined;
+  downloadInnertubePromise = undefined;
 };
 
 export const textOf = (t) => t?.text ?? (typeof t === "string" ? t : "");

@@ -9,3 +9,7 @@ export const CHANNEL_API_URL = "/api/channel";
 // thumbnail URL, without fetching any video list.
 export const ICON_API_URL = "/api/icon";
 export const CHAT_API_URL = "/api/chat";
+// api/download.js accepts `?id=VIDEO_ID` or `?url=WATCH_URL` and returns
+// streaming formats (like youtube-dl --list-formats / --get-url). When
+// `&itag=18` is appended the endpoint 302-redirects to the raw googlevideo URL.
+export const DOWNLOAD_API_URL = "/api/download";

@@ -1,11 +1,14 @@
 import { escapeHtml } from "./escapeHtml.js";
 import { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
 import { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
+import { fetchDownloadInfo, buildDownloadUrl } from "./download.js";
 
 // Tier B: pagination limits DOM growth. Initial batch + explicit Load More
 // keeps steady-state DOM ~24-72 nodes instead of 500. content-visibility
 // handles off-screen skip, but not creating nodes at all is stronger.
 const RENDER_BATCH_SIZE = 24;
+
+const downloadIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v14"/><path d="M7 14l5 5 5-5"/><path d="M3 21h18"/></svg>`;
 
 const videoCardHtml = (item, index, watchedVideos) => {
   const safeTitle = escapeHtml(item.title);
@@ -14,6 +17,7 @@ const videoCardHtml = (item, index, watchedVideos) => {
   const safeThumb = escapeHtml(thumbnailFor(item));
   const vid = videoIdOf(item);
   const isWatched = watchedVideos.has(vid);
+  const safeVid = escapeHtml(vid || "");
   return `
     <div class="yt-video-row-wrap${isWatched ? " yt-watched" : ""}" data-video-index="${index}" data-title="${safeTitle.toLowerCase()}">
       <a
@@ -27,14 +31,203 @@ const videoCardHtml = (item, index, watchedVideos) => {
           <img src="${safeThumb}" alt="${safeTitle}" loading="lazy" decoding="async" width="480" height="270" />
           <span class="yt-play-orb" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.14v14l11-7z"/></svg></span>
           <span class="yt-play-badge">▶</span>
+          ${safeVid ? `<button type="button" class="yt-download-btn" data-download-btn="${safeVid}" data-download-title="${safeTitle}" aria-label="Get link & download ${safeTitle}" title="Get link & download">${downloadIconSvg}</button>` : ""}
         </div>
         <div class="yt-video-meta">
           <h3 class="yt-video-title line-clamp-2">${safeTitle}</h3>
           <span class="yt-video-date">${escapeHtml(published)}</span>
+          ${safeVid ? `<div class="yt-card-actions"><button type="button" class="yt-card-action" data-download-btn="${safeVid}" data-download-title="${safeTitle}">${downloadIconSvg} Get link & download</button><button type="button" class="yt-card-action" data-copy-link="${safeLink}" title="Copy YouTube link">Copy link</button></div>` : ""}
         </div>
       </a>
     </div>
   `;
+};
+
+// ---------- Download modal (youtube-dl style) ----------
+let activeDlModal = null;
+
+const closeDownloadModal = () => {
+  if (!activeDlModal) return;
+  const el = activeDlModal;
+  activeDlModal = null;
+  el.classList.add("yt-hidden");
+  setTimeout(() => el.remove(), 260);
+  document.removeEventListener("keydown", onDlEsc);
+};
+
+const onDlEsc = (e) => {
+  if (e.key === "Escape") closeDownloadModal();
+};
+
+const formatBytes = (n) => {
+  if (!n || Number.isNaN(Number(n))) return "";
+  const bytes = Number(n);
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+};
+
+const formatLabel = (f) => {
+  const parts = [];
+  if (f.qualityLabel) parts.push(f.qualityLabel);
+  else if (f.quality) parts.push(f.quality);
+  if (f.mimeType) parts.push(f.mimeType.split(";")[0]);
+  if (f.fps) parts.push(`${f.fps}fps`);
+  if (f.hasAudio && f.hasVideo) parts.push("muxed");
+  else if (f.hasAudio && !f.hasVideo) parts.push("audio only");
+  else if (!f.hasAudio && f.hasVideo) parts.push("video only");
+  return parts.join(" · ");
+};
+
+const createDownloadModal = (videoId, title) => {
+  closeDownloadModal();
+  const overlay = document.createElement("div");
+  overlay.className = "yt-dl-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", `Download ${title}`);
+  activeDlModal = overlay;
+
+  const safeTitle = escapeHtml(title || videoId);
+  const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
+
+  overlay.innerHTML = `
+    <div class="yt-dl-modal">
+      <div class="yt-dl-header">
+        <div style="min-width:0;flex:1">
+          <h3 class="yt-dl-title">${safeTitle}</h3>
+          <div class="yt-dl-subtitle">${escapeHtml(watchUrl)}</div>
+        </div>
+        <button type="button" class="yt-dl-close" aria-label="Close">×</button>
+      </div>
+      <div class="yt-dl-body">
+        <div class="yt-dl-loading"><svg class="yt-spinner" viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" opacity="0.12"/><path class="yt-spinner-path" d="M25 5 A20 20 0 0 1 45 25" fill="none" stroke-width="4" stroke-linecap="round"/></svg> Fetching formats…</div>
+      </div>
+    </div>
+  `;
+
+  const body = overlay.querySelector(".yt-dl-body");
+  const closeBtn = overlay.querySelector(".yt-dl-close");
+  closeBtn.addEventListener("click", closeDownloadModal);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeDownloadModal();
+  });
+  document.addEventListener("keydown", onDlEsc);
+
+  // Input row: paste any YouTube URL to fetch (youtube-dl style)
+  const loadFormats = async (id) => {
+    try {
+      body.innerHTML = `<div class="yt-dl-loading"><svg class="yt-spinner" viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" opacity="0.12"/><path class="yt-spinner-path" d="M25 5 A20 20 0 0 1 45 25" fill="none" stroke-width="4" stroke-linecap="round"/></svg> Fetching formats…</div>`;
+      const data = await fetchDownloadInfo(id);
+      const all = Array.isArray(data.formats) ? data.formats : [];
+      const muxed = Array.isArray(data.muxed) ? data.muxed : all.filter((f) => f.hasAudio && f.hasVideo);
+      const audioOnly = Array.isArray(data.audioOnly) ? data.audioOnly : all.filter((f) => f.hasAudio && !f.hasVideo);
+      const videoOnly = Array.isArray(data.videoOnly) ? data.videoOnly : all.filter((f) => f.hasVideo && !f.hasAudio);
+
+      const renderGroup = (label, list) => {
+        if (!list.length) return "";
+        const rows = list
+          .map((f) => {
+            const directUrl = f.url || buildDownloadUrl(id, f.itag);
+            const sub = [f.mimeType?.split(";")[0] || "", f.contentLength ? formatBytes(f.contentLength) : "", f.bitrate ? `${Math.round(f.bitrate / 1000)} kbps` : ""].filter(Boolean).join(" · ");
+            return `
+              <div class="yt-dl-format">
+                <div class="yt-dl-format-meta">
+                  <div class="yt-dl-format-label">${escapeHtml(formatLabel(f))} <span style="color:#86868b;font-weight:600">· itag ${escapeHtml(String(f.itag))}</span></div>
+                  <div class="yt-dl-format-sub">${escapeHtml(sub || f.mimeType || "")}</div>
+                </div>
+                <div class="yt-dl-format-actions">
+                  <a href="${escapeHtml(directUrl)}" target="_blank" rel="noopener noreferrer" class="yt-dl-btn yt-dl-btn--primary" title="Open / download via direct link">Download</a>
+                  <button type="button" class="yt-dl-btn" data-copy-url="${escapeHtml(directUrl)}">Copy link</button>
+                </div>
+              </div>`;
+          })
+          .join("");
+        return `<div class="yt-dl-section"><h4 class="yt-dl-section-title">${escapeHtml(label)} · ${list.length}</h4>${rows}</div>`;
+      };
+
+      const hlsBlock = data.hlsManifestUrl
+        ? `<div class="yt-dl-section"><h4 class="yt-dl-section-title">HLS manifest</h4><div class="yt-dl-format"><div class="yt-dl-format-meta"><div class="yt-dl-format-label">HLS (adaptive)</div><div class="yt-dl-format-sub" style="word-break:break-all">${escapeHtml(data.hlsManifestUrl)}</div></div><div class="yt-dl-format-actions"><a href="${escapeHtml(data.hlsManifestUrl)}" target="_blank" rel="noopener noreferrer" class="yt-dl-btn yt-dl-btn--primary">Open</a><button type="button" class="yt-dl-btn" data-copy-url="${escapeHtml(data.hlsManifestUrl)}">Copy</button></div></div></div>`
+        : "";
+
+      body.innerHTML = `
+        <div class="yt-dl-input-row">
+          <input class="yt-dl-input" type="text" placeholder="Paste YouTube link or id (e.g. https://www.youtube.com/watch?v=...)" value="${escapeHtml(watchUrl)}" data-dl-input />
+          <button type="button" class="yt-btn yt-btn-primary" data-dl-fetch>Fetch</button>
+        </div>
+        <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="${escapeHtml(watchUrl)}" target="_blank" rel="noopener noreferrer" class="yt-dl-btn">Open on YouTube</a>
+          <button type="button" class="yt-dl-btn" data-copy-url="${escapeHtml(watchUrl)}">Copy watch link</button>
+          <span style="font-size:11.5px;color:#86868b;align-self:center">${escapeHtml(data.title || "")} ${data.author ? `· ${escapeHtml(data.author)}` : ""}</span>
+        </div>
+        ${renderGroup("Muxed (audio+video) — like youtube-dl default", muxed)}
+        ${renderGroup("Video only (adaptive)", videoOnly)}
+        ${renderGroup("Audio only", audioOnly)}
+        ${hlsBlock}
+        ${!muxed.length && !videoOnly.length && !audioOnly.length ? `<div class="yt-dl-empty">No formats returned for this video.</div>` : ""}
+      `;
+
+      const input = body.querySelector("[data-dl-input]");
+      const fetchBtn = body.querySelector("[data-dl-fetch]");
+      const doFetch = () => {
+        const raw = input.value.trim();
+        if (!raw) return;
+        // re-open modal for new id (reuse current overlay)
+        const newId = (() => {
+          try {
+            const u = new URL(raw);
+            const v = u.searchParams.get("v");
+            if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+            const m = raw.match(/([a-zA-Z0-9_-]{11})/);
+            return m ? m[1] : raw;
+          } catch {
+            const m = raw.match(/([a-zA-Z0-9_-]{11})/);
+            return m ? m[1] : raw;
+          }
+        })();
+        if (!/^[a-zA-Z0-9_-]{11}$/.test(newId)) {
+          body.insertAdjacentHTML("afterbegin", `<div class="yt-dl-error" style="margin-bottom:10px">Invalid YouTube id or URL.</div>`);
+          return;
+        }
+        overlay.querySelector(".yt-dl-title").textContent = newId;
+        overlay.querySelector(".yt-dl-subtitle").textContent = `https://www.youtube.com/watch?v=${newId}`;
+        loadFormats(newId);
+      };
+      fetchBtn.addEventListener("click", doFetch);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doFetch();
+      });
+
+      body.querySelectorAll("[data-copy-url]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const url = btn.getAttribute("data-copy-url") || "";
+          try {
+            await navigator.clipboard.writeText(url);
+            const prev = btn.textContent;
+            btn.textContent = "Copied!";
+            setTimeout(() => (btn.textContent = prev), 1200);
+          } catch {
+            window.prompt("Copy link:", url);
+          }
+        });
+      });
+    } catch (err) {
+      body.innerHTML = `<div class="yt-dl-error">${escapeHtml(err?.message || "Failed to fetch download info.")}</div><div style="margin-top:10px"><button type="button" class="yt-dl-btn" data-dl-retry>Retry</button></div>`;
+      const retry = body.querySelector("[data-dl-retry]");
+      retry?.addEventListener("click", () => loadFormats(id));
+    }
+  };
+
+  document.body.appendChild(overlay);
+  // trigger entrance
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.remove("yt-hidden")));
+  loadFormats(videoId);
+};
+
+const openDownloadModal = (videoId, title) => {
+  if (!videoId) return;
+  createDownloadModal(videoId, title || videoId);
 };
 
 export const renderPlaylist = ({ name, playlistId, data }) => {
@@ -124,6 +317,35 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   // Tier B: delegated click — 1 listener instead of N (500) listeners
   grid?.addEventListener("click", (event) => {
+    // Download / copy buttons take priority (they live inside the <a> but must not trigger navigation)
+    const dlBtn = event.target.closest?.("[data-download-btn]");
+    if (dlBtn && grid.contains(dlBtn)) {
+      event.preventDefault();
+      event.stopPropagation();
+      const vid = dlBtn.getAttribute("data-download-btn");
+      const t = dlBtn.getAttribute("data-download-title") || "";
+      openDownloadModal(vid, t);
+      return;
+    }
+    const copyBtn = event.target.closest?.("[data-copy-link]");
+    if (copyBtn && grid.contains(copyBtn)) {
+      event.preventDefault();
+      event.stopPropagation();
+      const url = copyBtn.getAttribute("data-copy-link") || "";
+      if (url) {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = "Copied!";
+            setTimeout(() => (copyBtn.textContent = orig), 1200);
+          }).catch(() => window.prompt("Copy link:", url));
+        } else {
+          window.prompt("Copy link:", url);
+        }
+      }
+      return;
+    }
+
     const link = event.target.closest?.("[data-video-link]");
     if (!link || !grid.contains(link)) return;
     const wrap = link.closest("[data-video-index]");
