@@ -64,10 +64,10 @@ export const renderMarkdown = (src = "") => {
   if (!src) return "";
   let md = String(src);
 
-  // Code blocks ```...```
+  // Code blocks ```...``` – use placeholder without _ or * to avoid bold/italic collision
   const codeBlocks = [];
   md = md.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
-    const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
+    const placeholder = `§CODEBLOCK${codeBlocks.length}§`;
     const escCode = escapeHtml(code);
     codeBlocks.push(`<pre class="yt-md-pre"><code>${escCode}</code></pre>`);
     return placeholder;
@@ -76,7 +76,7 @@ export const renderMarkdown = (src = "") => {
   // Inline code `...`
   const inlineCodes = [];
   md = md.replace(/`([^`]+?)`/g, (_, code) => {
-    const placeholder = `__INLINECODE_${inlineCodes.length}__`;
+    const placeholder = `§INLINECODE${inlineCodes.length}§`;
     inlineCodes.push(`<code class="yt-md-code">${escapeHtml(code)}</code>`);
     return placeholder;
   });
@@ -140,15 +140,6 @@ export const renderMarkdown = (src = "") => {
   md = md.replace(/^\s*[-*+]\s+(.+)$/gm, "<li>$1</li>");
   md = md.replace(/^\s*\d+\.\s+(.+)$/gm, '<li class="yt-md-ol-item">$1</li>');
 
-  // Bold / Italic (order matters: *** first)
-  md = md.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
-  md = md.replace(/___(.+?)___/g, "<strong><em>$1</em></strong>");
-  md = md.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  md = md.replace(/__(.+?)__/g, "<strong>$1</strong>");
-  // italic: single * and _ but not part of bold
-  md = md.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-  md = md.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/g, "<em>$1</em>");
-
   // Group consecutive <li> into <ul>/<ol>
   md = md.replace(/(?:<li(?: class="[^"]*")?>.*?\/li>(?:\n)?)+/g, (match) => {
     const isOrdered = match.includes("yt-md-ol-item");
@@ -168,10 +159,10 @@ export const renderMarkdown = (src = "") => {
 
   // Restore inline code and code blocks
   codeBlocks.forEach((html, idx) => {
-    md = md.split(`__CODEBLOCK_${idx}__`).join(html);
+    md = md.split(`§CODEBLOCK${idx}§`).join(html);
   });
   inlineCodes.forEach((html, idx) => {
-    md = md.split(`__INLINECODE_${idx}__`).join(html);
+    md = md.split(`§INLINECODE${idx}§`).join(html);
   });
 
   // Merge adjacent blockquotes that were split by <br/>

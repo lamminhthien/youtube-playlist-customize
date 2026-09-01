@@ -253,9 +253,6 @@
     --tw-font-weight: var(--font-weight-medium);
     font-weight: var(--font-weight-medium);
   }
-  .italic {
-    font-style: italic;
-  }
   .opacity-70 {
     opacity: 70%;
   }
