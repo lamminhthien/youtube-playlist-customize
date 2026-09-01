@@ -13,6 +13,7 @@ export const DEFAULT_OLLAMA_SETTINGS = {
   model: "", // e.g. llama3.1 ; empty = server default
   apiKey: "", // optional bearer for hosted Ollama
   useExternal: true, // allow searching outside local cache (via LLM)
+  useWebSearch: true, // allow live internet search (free DuckDuckGo/Wikipedia, or Tavily/Brave if configured)
 };
 
 export const getOllamaSettings = () => {
@@ -53,6 +54,13 @@ export const formatLocalSearchAnswer = (query, results) => {
   return `Found ${results.length} matching video(s) in your cached library for "${escapeHtml(query)}":<br/><br/>${lines.join("<br/>")}`;
 };
 
+export const formatWebResults = (results, provider) => {
+  if (!results || !results.length) return "";
+  const badge = provider ? `via ${escapeHtml(provider)}` : "web";
+  const items = results.map((r, i) => `<li><a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.title)}</a><br/><span style="color:#6e6e73;font-size:12px">${escapeHtml((r.snippet || "").slice(0, 160))}</span> <span style="color:#86868b;font-size:11px">[${i + 1}]</span></li>`).join("");
+  return `<div class="yt-web-results" style="margin-top:12px;padding:10px 12px;background:#f5f5f7;border-radius:8px"><strong style="font-size:12px">🌐 Web search ${badge}:</strong><ol style="margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.5">${items}</ol></div>`;
+};
+
 // Call the server proxy. Returns { answer, source, error }.
 export const callChatApi = async (messages, opts = {}) => {
   const settings = getOllamaSettings();
@@ -60,6 +68,7 @@ export const callChatApi = async (messages, opts = {}) => {
     messages,
     context: opts.context ?? buildVideoContext(),
     useExternal: opts.useExternal ?? settings.useExternal,
+    useWebSearch: opts.useWebSearch ?? settings.useWebSearch,
     // per-request overrides (from settings UI) — server will prefer these over env
     baseUrl: settings.baseUrl || undefined,
     model: settings.model || undefined,
@@ -81,7 +90,7 @@ export const callChatApi = async (messages, opts = {}) => {
 
 // High-level helper used by the UI:
 // 1) always runs local search so we can show cached results instantly
-// 2) if useExternal is true, also calls Ollama (or falls back to local-only answer on failure)
+// 2) if useExternal is true, also calls Ollama + live web search (or falls back to local-only answer on failure)
 export const answerQuery = async (query) => {
   const q = (query || "").trim();
   if (!q) throw new Error("Empty query");
@@ -93,20 +102,21 @@ export const answerQuery = async (query) => {
     return { answer: localAnswer, source: "local", localResults };
   }
 
-  // Try Ollama via proxy; on failure return local answer with note
+  // Try Ollama + web search via proxy; on failure return local answer with note
   try {
     const messages = [{ role: "user", content: q }];
     const data = await callChatApi(messages, { context: buildVideoContext() });
     // data.answer is markdown from Ollama — render to HTML
     let combined = data.answer || "";
     const rendered = renderMarkdown(combined);
-    const ollamaBlock = `<div class="yt-md"><strong>Ollama says:</strong><br/><br/>${rendered}</div>`;
+    const ollamaBlock = `<div class="yt-md"><strong>${data.webResults?.length ? "AI + Web says:" : "Ollama says:"}</strong><br/><br/>${rendered}</div>`;
+    const webBlock = formatWebResults(data.webResults, data.webProvider);
     if (localResults.length) {
-      combined = `${localAnswer}<br/><br/><hr style="margin:12px 0;border:none;border-top:1px solid rgba(0,0,0,0.08)"/><br/>${ollamaBlock}`;
+      combined = `${localAnswer}<br/><br/><hr style="margin:12px 0;border:none;border-top:1px solid rgba(0,0,0,0.08)"/><br/>${ollamaBlock}${webBlock}`;
     } else {
-      combined = rendered;
+      combined = `${rendered}${webBlock}`;
     }
-    return { answer: combined, source: data.source || "ollama", localResults, rawAnswer: data.answer };
+    return { answer: combined, source: data.source || "ollama", localResults, rawAnswer: data.answer, webResults: data.webResults, webProvider: data.webProvider };
   } catch (err) {
     const note = `<br/><br/><span style="color:#ff3b30;font-size:12px">Ollama unavailable: ${escapeHtml(err.message)}. Showing local results only. Configure Ollama in settings (gear icon).</span>`;
     return { answer: localAnswer + note, source: "local-fallback", localResults, error: err.message };

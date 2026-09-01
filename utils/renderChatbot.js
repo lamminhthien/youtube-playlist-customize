@@ -42,7 +42,7 @@ export const renderChatbot = () => {
         <div class="yt-chatbot-header-title">
           <span class="yt-chatbot-dot" aria-hidden="true"></span>
           <strong>Playlist AI</strong>
-          <span class="yt-chatbot-sub">Ask about cached videos · Ollama</span>
+          <span class="yt-chatbot-sub">Ask about cached videos · Ollama + Web</span>
         </div>
         <div class="yt-chatbot-header-actions">
           <button type="button" class="yt-chatbot-icon-btn" data-action="settings" aria-label="Chat settings" title="Ollama settings">
@@ -70,6 +70,10 @@ export const renderChatbot = () => {
         <label class="yt-chatbot-toggle">
           <input type="checkbox" data-external-toggle />
           <span>Allow external search (ask Ollama beyond cached videos)</span>
+        </label>
+        <label class="yt-chatbot-toggle">
+          <input type="checkbox" data-web-toggle />
+          <span>Enable live web search (free DuckDuckGo / Wikipedia)</span>
         </label>
         <div class="yt-chatbot-settings-actions">
           <button type="button" class="yt-btn yt-btn-primary" data-action="save-settings">Save</button>
@@ -102,6 +106,7 @@ export const renderChatbot = () => {
   const modelInput = wrapper.querySelector("#yt-ollama-model");
   const keyInput = wrapper.querySelector("#yt-ollama-key");
   const externalToggle = wrapper.querySelector("[data-external-toggle]");
+  const webToggle = wrapper.querySelector("[data-web-toggle]");
 
   let isOpen = false;
   let isThinking = false;
@@ -118,6 +123,7 @@ export const renderChatbot = () => {
     if (modelInput) modelInput.value = s.model || "";
     if (keyInput) keyInput.value = s.apiKey || "";
     if (externalToggle) externalToggle.checked = s.useExternal !== false;
+    if (webToggle) webToggle.checked = s.useWebSearch !== false;
   };
 
   const appendMessage = (role, html, isHtml = true) => {
@@ -137,7 +143,7 @@ export const renderChatbot = () => {
     messagesEl.innerHTML = "";
     const history = loadHistory();
     if (!history.length) {
-      appendMessage("assistant", `Hi! I can search your <strong>cached videos</strong> (from playlists/channels you’ve opened) and, if enabled, ask <strong>Ollama</strong> for broader answers.<br/><br/>Try:<br/>• “find lofi videos”<br/>• “what’s in my playlist about summer?”<br/>• “recommend something unwatched”`, true);
+      appendMessage("assistant", `Hi! I can search your <strong>cached videos</strong> (from playlists/channels you’ve opened), ask <strong>Ollama</strong> for broader answers, and search the <strong>live web</strong> (DuckDuckGo + Wikipedia, no API key needed).<br/><br/>Try:<br/>• “find lofi videos”<br/>• “what’s new in Next.js today?”<br/>• “recommend something unwatched”`, true);
     } else {
       for (const turn of history) {
         appendMessage(turn.role === "user" ? "user" : "assistant", turn.content, turn.isHtml !== false);
@@ -179,6 +185,7 @@ export const renderChatbot = () => {
       model: modelInput.value.trim(),
       apiKey: keyInput.value.trim(),
       useExternal: !!externalToggle.checked,
+      useWebSearch: !!webToggle.checked,
     });
     if (settingsHint) {
       settingsHint.textContent = "Saved ✓";
