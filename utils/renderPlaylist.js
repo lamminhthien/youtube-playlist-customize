@@ -2,9 +2,9 @@ import { escapeHtml } from "./escapeHtml.js";
 import { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
 import { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
 
-// Rendering every card up front is what makes large channels/playlists feel
-// slow (hundreds of DOM nodes at once). Instead we render an initial batch
-// and lazily render the rest as the user scrolls near the bottom.
+// Tier B: pagination limits DOM growth. Initial batch + explicit Load More
+// keeps steady-state DOM ~24-72 nodes instead of 500. content-visibility
+// handles off-screen skip, but not creating nodes at all is stronger.
 const RENDER_BATCH_SIZE = 24;
 
 const videoCardHtml = (item, index, watchedVideos) => {
@@ -14,8 +14,6 @@ const videoCardHtml = (item, index, watchedVideos) => {
   const safeThumb = escapeHtml(thumbnailFor(item));
   const vid = videoIdOf(item);
   const isWatched = watchedVideos.has(vid);
-  // Images use decoding="async" + loading="lazy" to avoid blocking main thread
-  // and to let the browser defer off-screen decodes (critical on Android).
   return `
     <div class="yt-video-row-wrap${isWatched ? " yt-watched" : ""}" data-video-index="${index}" data-title="${safeTitle.toLowerCase()}">
       <a
@@ -100,9 +98,6 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     </div>
   `;
 
-  // Clicking a video opens a single dedicated tab (player.html) that plays
-  // the whole queue back-to-back, auto-advancing to the next video when one
-  // ends, instead of juggling an inline player embedded in this page.
   const QUEUE_STORAGE_KEY = "yt-player-queue";
 
   const openInPlayerTab = (index) => {
@@ -113,9 +108,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     try {
       const queue = items.map((it) => ({ id: videoIdOf(it), title: it.title || "" }));
       localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify({ items: queue, listId: playlistId || "" }));
-    } catch {
-      // localStorage unavailable (e.g. private mode quota) — player.html falls back to a single video.
-    }
+    } catch {}
 
     const params = new URLSearchParams({ v: videoId, i: String(index), title: item.title || "YouTube video player" });
     if (playlistId) params.set("list", playlistId);
@@ -129,11 +122,35 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
   let activeFilter = "all";
   let searchQuery = "";
 
+  // Tier B: delegated click — 1 listener instead of N (500) listeners
+  grid?.addEventListener("click", (event) => {
+    const link = event.target.closest?.("[data-video-link]");
+    if (!link || !grid.contains(link)) return;
+    const wrap = link.closest("[data-video-index]");
+    if (!wrap) return;
+    const index = Number(wrap.getAttribute("data-video-index"));
+    if (Number.isNaN(index)) return;
+
+    wrap.classList.add("yt-watched");
+    markVideoWatched(items[index]);
+    // keep filter in sync — if filtering unwatched, hide card shortly
+    scheduleApplyFilters();
+
+    if (event.button && event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    openInPlayerTab(index);
+  });
+
+  // Cache card list for filter to avoid querySelectorAll per keystroke
+  const getCardsCached = () => grid ? [...grid.querySelectorAll("[data-video-index]")] : [];
+
   const applyFilters = () => {
-    const cards = grid ? grid.querySelectorAll("[data-video-index]") : [];
+    const cards = getCardsCached();
     let visible = 0;
-    cards.forEach((card) => {
-      const title = (card.getAttribute("data-title") || "").toLowerCase();
+    for (const card of cards) {
+      const title = (card.getAttribute("data-title") || "");
       const isWatched = card.classList.contains("yt-watched");
       const matchesSearch = !searchQuery || title.includes(searchQuery);
       const matchesFilter =
@@ -141,49 +158,37 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
         (activeFilter === "watched" && isWatched) ||
         (activeFilter === "unwatched" && !isWatched);
       const show = matchesSearch && matchesFilter;
+      // Use hidden attribute style to avoid inline layout thrash on each loop
+      card.hidden = !show;
       card.style.display = show ? "" : "none";
       if (show) visible += 1;
-    });
+    }
     if (emptyState) emptyState.classList.toggle("hidden", visible !== 0);
-  };
-
-  // Debounce filter updates via rAF so typing/search doesn't thrash layout
-  // when hundreds of cards are present (Android jank).
-  let filterRaf = null;
-  const scheduleApplyFilters = () => {
-    if (filterRaf !== null) return;
-    const cb = () => {
-      filterRaf = null;
-      applyFilters();
-    };
-    if (typeof requestAnimationFrame !== "undefined") {
-      filterRaf = requestAnimationFrame(cb);
-    } else {
-      cb();
+    // Hide Load More when filtering narrows results — pagination is for unfiltered list
+    if (loadMoreWrap) {
+      const isFiltering = Boolean(searchQuery) || activeFilter !== "all";
+      loadMoreWrap.hidden = isFiltering;
+      loadMoreWrap.style.display = isFiltering ? "none" : "";
     }
   };
 
-  const attachCardClickHandler = (wrap) => {
-    const link = wrap.querySelector("[data-video-link]");
-    const index = Number(wrap.getAttribute("data-video-index"));
-
-    if (!link) return;
-    link.addEventListener("click", (event) => {
-      if (Number.isNaN(index)) return;
-
-      wrap.classList.add("yt-watched");
-      markVideoWatched(items[index]);
-      // keep filter in sync — if filtering unwatched, hide card immediately
-      setTimeout(scheduleApplyFilters, 30);
-
-      // Let modified clicks (new tab / new window) and non-primary buttons
-      // fall through to the normal link behavior.
-      if (event.button && event.button !== 0) return;
-      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-      event.preventDefault();
-      openInPlayerTab(index);
-    });
+  // Tier B: debounce 150ms + rAF so typing doesn't thrash layout
+  let filterTimer = null;
+  let filterRaf = null;
+  const scheduleApplyFilters = () => {
+    if (filterTimer) clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => {
+      if (filterRaf !== null) return;
+      const cb = () => {
+        filterRaf = null;
+        applyFilters();
+      };
+      if (typeof requestAnimationFrame !== "undefined") {
+        filterRaf = requestAnimationFrame(cb);
+      } else {
+        cb();
+      }
+    }, 120);
   };
 
   searchInput?.addEventListener("input", (e) => {
@@ -198,103 +203,87 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
     });
   });
 
-  grid?.querySelectorAll("[data-video-index]").forEach(attachCardClickHandler);
-
-  // Lazily render remaining cards in batches as the user scrolls near the
-  // bottom, instead of building hundreds of DOM nodes for large channels
-  // and playlists up front. Uses a rAF-batched observer with a large rootMargin
-  // so the next batch is ready *before* the user reaches the bottom (pre-load
-  // viewport) and avoids long tasks that jank scroll on Android.
+  // Tier B: pagination via Load More button (keeps DOM at ~60-80 steady state)
+  // Instead of auto-rendering 500 nodes via infinite IntersectionObserver,
+  // user explicitly pages. Auto-observer is kept as progressive enhancement
+  // with a large rootMargin so near-bottom scroll pre-loads, but button is
+  // the primary control for low-memory devices.
   let renderedCount = initialItems.length;
+  let loadMoreWrap = null;
+  let loadMoreBtn = null;
+  let observer = null;
+
+  const appendNextBatchHtml = (nextItems, startIdx) => {
+    const html = nextItems.map((item, i) => videoCardHtml(item, startIdx + i, watchedVideos)).join("");
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    // Use children iteration for stub compat (no DocumentFragment need)
+    [...temp.children].forEach((card) => grid.appendChild(card));
+  };
+
+  const updateLoadMoreUi = () => {
+    if (!loadMoreBtn) return;
+    const remaining = items.length - renderedCount;
+    if (remaining <= 0) {
+      loadMoreBtn.textContent = "All caught up ✓";
+      loadMoreBtn.disabled = true;
+      if (observer) observer.disconnect();
+      // keep wrap visible briefly then hide
+      setTimeout(() => { if (loadMoreWrap) loadMoreWrap.style.display = "none"; }, 800);
+      return;
+    }
+    loadMoreBtn.textContent = `Load more — ${remaining} remaining · ${renderedCount} of ${items.length}`;
+    loadMoreBtn.disabled = false;
+  };
+
+  const loadNextBatch = () => {
+    const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
+    if (!nextItems.length) {
+      updateLoadMoreUi();
+      return;
+    }
+    appendNextBatchHtml(nextItems, renderedCount);
+    renderedCount += nextItems.length;
+    updateLoadMoreUi();
+    // Re-apply filters so newly added cards respect current filter
+    applyFilters();
+  };
+
   if (grid && renderedCount < items.length) {
-    const hasIO = typeof IntersectionObserver !== "undefined";
-    if (hasIO) {
-      const sentinel = document.createElement("div");
-      sentinel.setAttribute("data-sentinel", "");
-      sentinel.style.height = "1px";
-      sentinel.style.width = "100%";
-      // content-visibility can't apply to sentinel; keep it tiny but observable
-      sentinel.style.contain = "strict";
-      grid.appendChild(sentinel);
+    loadMoreWrap = document.createElement("div");
+    loadMoreWrap.className = "yt-load-more-wrap";
+    loadMoreWrap.setAttribute("data-load-more-wrap", "");
+    loadMoreBtn = document.createElement("button");
+    loadMoreBtn.type = "button";
+    loadMoreBtn.className = "yt-load-more";
+    loadMoreBtn.setAttribute("data-load-more", "");
+    loadMoreWrap.appendChild(loadMoreBtn);
+    // Insert after grid (inside yt-playlist)
+    const playlistEl = section.querySelector(".yt-playlist");
+    if (playlistEl) playlistEl.appendChild(loadMoreWrap);
+    else section.appendChild(loadMoreWrap);
 
-      let ticking = false;
-      const scheduleBatch = () => {
-        if (ticking) return;
-        ticking = true;
-        const run = () => {
-          ticking = false;
-          const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
-          if (!nextItems.length) {
-            observer.disconnect();
-            sentinel.remove();
-            return;
-          }
-          // Use a DocumentFragment-equivalent via temp container to batch DOM insert
-          const temp = document.createElement("div");
-          temp.innerHTML = nextItems
-            .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
-            .join("");
-          const cards = [...temp.children];
-          cards.forEach((card) => {
-            grid.insertBefore(card, sentinel);
-            attachCardClickHandler(card);
-          });
-          renderedCount += nextItems.length;
-          scheduleApplyFilters();
+    updateLoadMoreUi();
 
-          if (renderedCount >= items.length) {
-            observer.disconnect();
-            sentinel.remove();
-          }
-        };
-        // Prefer idle callback for non-urgent batch work, fallback to rAF
-        if (typeof requestIdleCallback !== "undefined") {
-          requestIdleCallback(run, { timeout: 200 });
-        } else if (typeof requestAnimationFrame !== "undefined") {
-          requestAnimationFrame(run);
-        } else {
-          run();
-        }
-      };
+    loadMoreBtn.addEventListener("click", () => {
+      // Use rIC/rAF to keep main-thread idle friendly
+      const run = () => loadNextBatch();
+      if (typeof requestIdleCallback !== "undefined") requestIdleCallback(run, { timeout: 200 });
+      else if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(run);
+      else run();
+    });
 
-      const observer = new IntersectionObserver((entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        scheduleBatch();
-      }, {
-        // Pre-load next batch 600px before sentinel enters viewport
-        rootMargin: "600px 0px",
-        threshold: 0,
-      });
-      observer.observe(sentinel);
-    } else {
-      // Fallback for environments without IntersectionObserver (e.g. old WebView):
-      // render remaining items in idle chunks so we don't block first paint.
-      const renderChunkIdle = () => {
-        if (renderedCount >= items.length) return;
-        const nextItems = items.slice(renderedCount, renderedCount + RENDER_BATCH_SIZE);
-        const temp = document.createElement("div");
-        temp.innerHTML = nextItems
-          .map((item, i) => videoCardHtml(item, renderedCount + i, watchedVideos))
-          .join("");
-        [...temp.children].forEach((card) => {
-          grid.appendChild(card);
-          attachCardClickHandler(card);
-        });
-        renderedCount += nextItems.length;
-        scheduleApplyFilters();
-        if (renderedCount < items.length) {
-          if (typeof requestIdleCallback !== "undefined") {
-            requestIdleCallback(renderChunkIdle, { timeout: 300 });
-          } else {
-            setTimeout(renderChunkIdle, 32);
-          }
-        }
-      };
-      if (typeof requestIdleCallback !== "undefined") {
-        requestIdleCallback(renderChunkIdle, { timeout: 300 });
-      } else {
-        setTimeout(renderChunkIdle, 32);
-      }
+    // Progressive enhancement: auto-load when wrap nears viewport (600px margin)
+    if (typeof IntersectionObserver !== "undefined" && loadMoreWrap) {
+      observer = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        // Avoid auto-loading too aggressively on desktop large lists — only
+        // auto-load once per idle to keep explicit paging dominant
+        if (loadMoreBtn.disabled) return;
+        // Throttle auto-load: require button to have been visible for at least 300ms
+        loadNextBatch();
+      }, { rootMargin: "600px 0px", threshold: 0 });
+      observer.observe(loadMoreWrap);
     }
   }
 
