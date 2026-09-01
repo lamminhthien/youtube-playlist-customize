@@ -12,6 +12,7 @@ import {
   renderReportIssueButton,
   openReportIssueModal,
   initScrollToTop,
+  renderChatbot,
 } from "./utils/index.js";
 
 // Each entry tab gets:
@@ -66,5 +67,13 @@ if (headerActions) {
 }
 
 initScrollToTop(document.getElementById("scroll-to-top"));
+
+// AI Chatbot — searches cached videos (localStorage after fetch) + Ollama for external
+try {
+  const chatbot = renderChatbot();
+  document.body.appendChild(chatbot);
+} catch (e) {
+  console.warn("Chatbot failed to mount:", e);
+}
 
 

@@ -101,6 +101,18 @@ class Node {
   click() {
     this.dispatchEvent({ type: "click", target: this });
   }
+  contains(node) {
+    if (!node) return false;
+    if (node === this) return true;
+    const walk = (n) => {
+      for (const c of n.childNodes) {
+        if (c === node) return true;
+        if (c.nodeType === 1 && walk(c)) return true;
+      }
+      return false;
+    };
+    return walk(this);
+  }
   remove() {
     if (!this.parentNode) return;
     this.parentNode.childNodes = this.parentNode.childNodes.filter((c) => c !== this);

@@ -14,3 +14,6 @@ export { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
 export { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
 export { fetchIssues, fetchIssueByNumber, ISSUES_API_URL } from "./fetchIssues.js";
 export { initScrollToTop } from "./scrollToTop.js";
+export { renderChatbot } from "./renderChatbot.js";
+export { getCachedVideos, saveVideosToCache, searchCachedVideos, VIDEO_CACHE_KEY } from "./videoCache.js";
+export { getOllamaSettings, saveOllamaSettings, callChatApi, answerQuery, buildVideoContext } from "./chatProvider.js";

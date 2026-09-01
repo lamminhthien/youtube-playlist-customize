@@ -1,5 +1,6 @@
 import { PLAYLIST_API_URL } from "../constants/config.js";
 import { fetchFromApi } from "./apiFetch.js";
+import { saveVideosToCache } from "./videoCache.js";
 
 /**
  * Fetch a YouTube playlist via our own serverless endpoint (api/playlist.js),
@@ -14,5 +15,9 @@ import { fetchFromApi } from "./apiFetch.js";
  */
 export const fetchPlaylist = async ([name, playlistId]) => {
   const payload = await fetchFromApi(PLAYLIST_API_URL, name, "playlist", playlistId);
+  // Persist for chatbot local search (localStorage after fetching list)
+  try {
+    if (Array.isArray(payload?.items)) saveVideosToCache(payload.items, name);
+  } catch {}
   return { name, playlistId, data: payload };
 };

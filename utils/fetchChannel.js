@@ -1,5 +1,6 @@
 import { CHANNEL_API_URL } from "../constants/config.js";
 import { fetchFromApi } from "./apiFetch.js";
+import { saveVideosToCache } from "./videoCache.js";
 
 /**
  * Fetch a YouTube channel's recent uploads via our own serverless endpoint
@@ -14,5 +15,8 @@ import { fetchFromApi } from "./apiFetch.js";
  */
 export const fetchChannel = async ([name, channelId]) => {
   const payload = await fetchFromApi(CHANNEL_API_URL, name, "channel", channelId);
+  try {
+    if (Array.isArray(payload?.items)) saveVideosToCache(payload.items, name);
+  } catch {}
   return { name, playlistId: undefined, data: payload };
 };
