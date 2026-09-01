@@ -12,6 +12,5 @@ export { escapeHtml } from "./escapeHtml.js";
 export { renderReportIssueButton, openReportIssueModal, createReportIssueModal } from "./renderReportIssue.js";
 export { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
 export { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
-export { getDownloadApiUrl, getDownloadStreamUrl, triggerDownload, fetchDownloadInfo } from "./downloadVideo.js";
 export { fetchIssues, fetchIssueByNumber, ISSUES_API_URL } from "./fetchIssues.js";
 export { initScrollToTop } from "./scrollToTop.js";

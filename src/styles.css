@@ -675,7 +675,7 @@ a:hover { text-decoration: none; }
 }
 @keyframes pulseDot { 0%,100%{ transform: scale(1); opacity:1; } 50%{ transform: scale(1.1); opacity:0.85; } }
 
-/* ================== Download Button ================== */
+/* ================== Video Row Wrapper ================== */
 .yt-video-row-wrap {
   display: flex;
   align-items: stretch;
@@ -695,38 +695,11 @@ a:hover { text-decoration: none; }
 .yt-video-row-wrap.yt-watched .yt-video-title { color: #6e6e73; font-weight: 600; }
 .yt-video-row--link { flex: 1 1 auto; min-width: 0; border-bottom: none !important; background: transparent !important; box-shadow: none !important; }
 .yt-video-row--link:hover { background: transparent !important; transform: none !important; box-shadow: none !important; }
-.yt-download-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-  flex: 0 0 auto;
-  align-self: center;
-  margin: 10px 12px 10px 0;
-  padding: 8px 12px;
-  font-size: 12.5px; font-weight: 700; letter-spacing: -0.15px;
-  color: #1d1d1f;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid rgba(0,0,0,0.07);
-  border-radius: 999px;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,1);
-  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
-  white-space: nowrap;
-}
-.yt-download-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-.yt-download-btn:hover { background: #1d1d1f; color: #fff; border-color: #1d1d1f; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.16); }
-.yt-download-btn:active { transform: scale(0.96); }
-.yt-download-btn:disabled { opacity: 0.6; cursor: wait; }
-.yt-download-btn[aria-busy="true"] { opacity: 0.75; }
 @media (min-width: 640px) {
   .yt-video-row-wrap { flex-direction: column; border-radius: 16px !important; border: 1px solid rgba(255,255,255,0.58) !important; background: rgba(255,255,255,0.84) !important; backdrop-filter: blur(16px) saturate(150%); box-shadow: 0 6px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.92) !important; }
   .yt-video-row-wrap:hover { transform: translateY(-4px) scale(1.015); box-shadow: 0 18px 40px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,1) !important; }
   .yt-video-row-wrap:last-child { border: 1px solid rgba(255,255,255,0.58) !important; }
   .yt-video-row--link { padding: 0 !important; border-radius: 16px 16px 0 0; }
-  .yt-download-btn { margin: 0 12px 12px; align-self: stretch; justify-content: center; padding: 9px 14px; background: rgba(0,0,0,0.06); border-color: transparent; }
-  .yt-download-btn:hover { background: #1d1d1f; }
-}
-@media (max-width: 639px) {
-  .yt-download-label { display: none; }
-  .yt-download-btn { padding: 9px 10px; border-radius: 12px; }
 }
 
 /* ============ Performance — Android scroll (issue #7) ============ */

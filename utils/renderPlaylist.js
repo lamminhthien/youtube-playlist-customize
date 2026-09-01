@@ -1,7 +1,6 @@
 import { escapeHtml } from "./escapeHtml.js";
 import { formatDate, videoIdFromUrl, thumbnailFor, videoIdOf } from "./videoHelpers.js";
 import { getWatchedVideos, markVideoWatched } from "./watchHistory.js";
-import { getDownloadStreamUrl } from "./downloadVideo.js";
 
 // Rendering every card up front is what makes large channels/playlists feel
 // slow (hundreds of DOM nodes at once). Instead we render an initial batch
@@ -14,11 +13,7 @@ const videoCardHtml = (item, index, watchedVideos) => {
   const safeLink = escapeHtml(item.url || "#");
   const safeThumb = escapeHtml(thumbnailFor(item));
   const vid = videoIdOf(item);
-  const safeVid = escapeHtml(vid);
   const isWatched = watchedVideos.has(vid);
-  const downloadLabel = `Download ${safeTitle}`;
-  // Download button is outside the anchor to avoid nested interactive elements;
-  // the whole row wraps in a container so we can position the button at the end.
   // Images use decoding="async" + loading="lazy" to avoid blocking main thread
   // and to let the browser defer off-screen decodes (critical on Android).
   return `
@@ -40,18 +35,6 @@ const videoCardHtml = (item, index, watchedVideos) => {
           <span class="yt-video-date">${escapeHtml(published)}</span>
         </div>
       </a>
-      ${vid ? `
-      <button
-        type="button"
-        data-download="${safeVid}"
-        data-download-title="${safeTitle}"
-        aria-label="${escapeHtml(downloadLabel)}"
-        title="Download for offline"
-        class="yt-download-btn"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        <span class="yt-download-label">Download</span>
-      </button>` : ""}
     </div>
   `;
 };
@@ -182,37 +165,7 @@ export const renderPlaylist = ({ name, playlistId, data }) => {
 
   const attachCardClickHandler = (wrap) => {
     const link = wrap.querySelector("[data-video-link]");
-    const downloadBtn = wrap.querySelector("[data-download]");
     const index = Number(wrap.getAttribute("data-video-index"));
-
-    // Download button: trigger same-origin attachment stream, don't open player
-    if (downloadBtn) {
-      downloadBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const vid = downloadBtn.getAttribute("data-download");
-        const t = downloadBtn.getAttribute("data-download-title") || vid;
-        if (!vid) return;
-        // visual feedback
-        const original = downloadBtn.innerHTML;
-        downloadBtn.disabled = true;
-        downloadBtn.setAttribute("aria-busy", "true");
-        // Trigger via hidden anchor to /api/download?download=1 (attachment)
-        const url = getDownloadStreamUrl(vid);
-        const a = document.createElement("a");
-        a.href = url;
-        a.setAttribute("download", `${(t || vid).slice(0, 80)}.mp4`);
-        a.style.display = "none";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          a.remove();
-          downloadBtn.disabled = false;
-          downloadBtn.removeAttribute("aria-busy");
-          downloadBtn.innerHTML = original;
-        }, 1200);
-      });
-    }
 
     if (!link) return;
     link.addEventListener("click", (event) => {
